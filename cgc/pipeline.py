@@ -1,3 +1,4 @@
+# cgc/pipeline.py
 from __future__ import annotations
 
 import argparse
@@ -7,7 +8,8 @@ from cgc.adapters.alignment import build_fake_alignment_manifest
 from cgc.adapters.fetcher import extract_game_id, fetch_game
 from cgc.adapters.storage import save_story
 from cgc.adapters.subtitles import write_ass
-from cgc.adapters.tts import build_fake_audio_manifest
+from cgc.adapters.tts import build_audio_manifest, build_fake_audio_manifest
+from cgc.config import PipelineConfig
 from cgc.domain.alignment import apply_alignment_manifest
 from cgc.domain.audio import apply_audio_manifest
 from cgc.domain.story import (
@@ -26,6 +28,8 @@ from cgc.domain.timeline import (
     validate_word_windows,
 )
 from cgc.domain.types import Story
+from cgc.video.assemble import assemble_video
+from cgc.video.render_scene import render_scene_frame
 
 
 def run_pipeline(
@@ -34,6 +38,8 @@ def run_pipeline(
     use_fake_tts: bool = True,
     use_fake_alignment: bool = True,
 ) -> Story:
+    cfg = PipelineConfig()
+
     # 1) Load and validate storyboard
     script = load_script(script_path)
     validate_script(script)
@@ -48,15 +54,15 @@ def run_pipeline(
     enriched = enrich_cards_with_positions(game, script)
     story = build_story(enriched, game_id, meta)
 
-    # 4) Audio manifest (fake for now)
+    # 4) Audio manifest
     if use_fake_tts:
-        audio_manifest = build_fake_audio_manifest(story, default_seconds=2.0)
+        audio_manifest = build_fake_audio_manifest(story, cfg, default_seconds=2.0)
     else:
-        raise NotImplementedError("real TTS manifest not wired yet")
+        audio_manifest = build_audio_manifest(story, cfg)
 
     story = apply_audio_manifest(story, audio_manifest)
 
-    # 5) Alignment manifest (fake for now)
+    # 5) Alignment manifest
     if use_fake_alignment:
         align_manifest = build_fake_alignment_manifest(story)
     else:
@@ -84,6 +90,28 @@ def run_pipeline(
         f"game_id={story.game_id} scenes={len(story.scenes)} "
         f"total={total:.2f}s story={story_json_path} subs={ass_path}"
     )
+
+    # 9) Render frames
+    frames_dir = "output/frames"
+    for scene in story.scenes:
+        frame_path = render_scene_frame(
+            scene, game_id=story.game_id, frames_dir=frames_dir
+        )
+        print(f"  frame → {frame_path}")
+
+    # 10) Assemble video
+    # audio_path is None until real TTS is wired (step C in roadmap)
+    merged_audio_path = audio_manifest.merged_audio_path  # None when fake
+    video_path = assemble_video(
+        story,
+        frames_dir=frames_dir,
+        audio_path=merged_audio_path,
+        ass_path=ass_path,
+        out_dir="output/video",
+        fps=30,
+    )
+    print(f"video={video_path}")
+
     return story
 
 
@@ -94,31 +122,27 @@ def main() -> None:
         "--device",
         choices=["cpu", "cuda"],
         default="cpu",
-        help="Device for alignment/TTS (reserved for real adapters later)",
     )
     parser.add_argument(
         "--no-fake-tts",
         action="store_true",
-        help="Disable fake TTS manifest (real TTS not yet implemented)",
+        help="Use real TTS (not yet implemented)",
     )
     parser.add_argument(
         "--no-fake-alignment",
         action="store_true",
-        help="Disable fake alignment manifest (real alignment not yet implemented)",
+        help="Use real alignment (not yet implemented)",
     )
 
     args = parser.parse_args()
 
-    script_path = args.script
-    device = args.device
-
-    if not Path(script_path).exists():
-        print("script not found:", script_path)
+    if not Path(args.script).exists():
+        print("script not found:", args.script)
         return
 
     run_pipeline(
-        script_path=script_path,
-        device=device,
+        script_path=args.script,
+        device=args.device,
         use_fake_tts=not args.no_fake_tts,
         use_fake_alignment=not args.no_fake_alignment,
     )
