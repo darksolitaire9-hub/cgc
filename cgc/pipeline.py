@@ -6,6 +6,7 @@ from pathlib import Path
 from cgc.adapters.alignment import build_fake_alignment_manifest
 from cgc.adapters.fetcher import extract_game_id, fetch_game
 from cgc.adapters.storage import save_story
+from cgc.adapters.subtitles import write_ass
 from cgc.adapters.tts import build_fake_audio_manifest
 from cgc.domain.alignment import apply_alignment_manifest
 from cgc.domain.audio import apply_audio_manifest
@@ -16,6 +17,7 @@ from cgc.domain.story import (
     load_script,
     validate_script,
 )
+from cgc.domain.subtitles import build_subtitle_events
 from cgc.domain.timeline import (
     assign_scene_timing,
     compute_total_duration,
@@ -69,16 +71,19 @@ def run_pipeline(
     validate_word_windows(story)
     total = compute_total_duration(story)
 
-    # 7) Save canonical story JSON
+    # 7) Subtitles (ASS)
+    events = build_subtitle_events(story)
+    ass_path = write_ass(game_id, events)
+
+    # 8) Save canonical story JSON
     out_dir = Path("output/story")
     out_path = out_dir / f"{game_id}.json"
     story_json_path = save_story(story, str(out_path))
 
     print(
         f"game_id={story.game_id} scenes={len(story.scenes)} "
-        f"total={total:.2f}s story={story_json_path}"
+        f"total={total:.2f}s story={story_json_path} subs={ass_path}"
     )
-
     return story
 
 

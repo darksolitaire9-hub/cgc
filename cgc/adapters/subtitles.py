@@ -1,67 +1,54 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Iterable
 
-from cgc.domain.subtitles import SubtitleEvent, escape_ass_text
-
-
-def _fmt(t: float) -> str:
-    if t < 0:
-        t = 0.0
-    cs = int(round(t * 100))
-    s, cs = divmod(cs, 100)
-    m, s = divmod(s, 60)
-    h, m = divmod(m, 60)
-    return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+from cgc.domain.subtitles import SubtitleEvent, escape_ass_text, format_ass_time
 
 
-def _header(w: int = 1080, h: int = 1920, margin_v: int = 540) -> str:
+def _default_ass_header() -> str:
+    # Minimal but valid ASS header with one style. [web:58][web:62]
     return (
-        f"[Script Info]\n"
-        f"PlayResX: {w}\n"
-        f"PlayResY: {h}\n"
-        f"WrapStyle: 2\n"
-        f"ScaledBorderAndShadow: yes\n"
-        f"\n"
-        f"[V4+ Styles]\n"
-        f"Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
-        f"OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
-        f"ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
-        f"Alignment, MarginL, MarginR, MarginV, Encoding\n"
-        f"Style: TikTokMain,Inter,74,"
-        f"&H00FFFFFF,"  # white
-        f"&H00000000,"  # unused
-        f"&H00000000,"  # outline
-        f"&H00000000,"  # back
-        f"-1,0,0,0,"  # bold, italic, underline, strikeout
-        f"100,100,0,0,"
-        f"1,5,0,"
-        f"2,"
-        f"40,40,{margin_v},1\n"
-        f"\n"
-        f"[Events]\n"
-        f"Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        """[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,42,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,3,0,2,120,120,80,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+""".rstrip()
+        + "\n"
     )
+
+
+def _dialogue_line(event: SubtitleEvent, style: str = "Default") -> str:
+    start = format_ass_time(event.start)
+    end = format_ass_time(event.end)
+    text = escape_ass_text(event.text)
+    # Dialogue format per ASS spec. [web:58][web:62]
+    return f"Dialogue: 0,{start},{end},{style},,0,0,0,,{text}\n"
 
 
 def write_ass(
     game_id: str,
-    events: list[SubtitleEvent],
+    events: Iterable[SubtitleEvent],
     out_dir: str = "output/subtitles",
-    *,
-    width: int = 1080,
-    height: int = 1920,
-    margin_v: int = 540,
 ) -> str:
-    lines: list[str] = [_header(w=width, h=height, margin_v=margin_v)]
+    """
+    Write a minimal ASS subtitle file for the given events and return its path.
+    """
+    out_path = Path(out_dir) / f"{game_id}.ass"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    header = _default_ass_header()
+    lines = [header]
 
     for ev in events:
-        text = escape_ass_text(ev.text)
-        lines.append(
-            f"Dialogue: 0,{_fmt(ev.start)},{_fmt(ev.end)},TikTokMain,,0,0,0,,{text}"
-        )
+        lines.append(_dialogue_line(ev))
 
-    path = Path(out_dir) / f"{game_id}.ass"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return str(path)
+    out_path.write_text("".join(lines), encoding="utf-8")
+    return str(out_path)
