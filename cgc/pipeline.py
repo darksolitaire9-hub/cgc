@@ -16,6 +16,14 @@ from cgc.domain.story import (
     load_script,
     validate_script,
 )
+from cgc.domain.timeline import (
+    assign_scene_timing,
+    compute_total_duration,
+    validate_scene_durations,
+    validate_scene_order,
+    validate_word_windows,
+)
+from cgc.domain.types import Story
 
 
 def run_pipeline(
@@ -23,7 +31,7 @@ def run_pipeline(
     device: str = "cpu",
     use_fake_tts: bool = True,
     use_fake_alignment: bool = True,
-) -> None:
+) -> Story:
     # 1) Load and validate storyboard
     script = load_script(script_path)
     validate_script(script)
@@ -54,12 +62,24 @@ def run_pipeline(
 
     story = apply_alignment_manifest(story, align_manifest)
 
-    # 6) Save canonical story JSON
+    # 6) Timeline: assign timing + validations + total duration
+    story = assign_scene_timing(story)
+    validate_scene_order(story)
+    validate_scene_durations(story)
+    validate_word_windows(story)
+    total = compute_total_duration(story)
+
+    # 7) Save canonical story JSON
     out_dir = Path("output/story")
     out_path = out_dir / f"{game_id}.json"
     story_json_path = save_story(story, str(out_path))
 
-    print(f"game_id={story.game_id} scenes={len(story.scenes)} story={story_json_path}")
+    print(
+        f"game_id={story.game_id} scenes={len(story.scenes)} "
+        f"total={total:.2f}s story={story_json_path}"
+    )
+
+    return story
 
 
 def main() -> None:
