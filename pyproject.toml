@@ -6,13 +6,8 @@ dependencies = [
   "python-chess",
   "requests",
   "pyyaml",
+  "numpy",
+  "soundfile",
+  "kokoro-onnx",
+  "imageio[ffmpeg]",
 ]
-
-[project.optional-dependencies]
-dev = [
-  "ruff",
-]
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"

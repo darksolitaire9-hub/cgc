@@ -21,6 +21,7 @@ from cgc.domain.timeline import (
     assign_scene_timing,
     compute_total_duration,
 )
+from cgc.video.assemble import assemble_video
 
 
 def build_story_from_script(script_path: str) -> None:
@@ -49,7 +50,7 @@ def build_story_from_script(script_path: str) -> None:
     total = compute_total_duration(story)
     events = build_subtitle_events(story)
     ass_path = write_ass(story.game_id, events)
-
+    video_path = assemble_video(story)
     print(
         f"game_id={story.game_id} scenes={len(story.scenes)} "
         f"total={total:.2f}s "
