@@ -1,0 +1,18 @@
+[project]
+name = "cgc"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "python-chess",
+  "requests",
+  "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
