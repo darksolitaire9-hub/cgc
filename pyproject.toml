@@ -10,4 +10,5 @@ dependencies = [
   "soundfile",
   "kokoro-onnx",
   "imageio[ffmpeg]",
+  "cairosvg",
 ]
