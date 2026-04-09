@@ -68,3 +68,16 @@ class AudioManifest:
     game_id: str
     merged_audio_path: str | None
     scenes: list[SceneAudioRef] = field(default_factory=list)
+
+
+@dataclass
+class SceneAlignmentRef:
+    scene_id: str
+    index: int
+    words: list[WordTiming] = field(default_factory=list)
+
+
+@dataclass
+class AlignmentManifest:
+    game_id: str
+    scenes: list[SceneAlignmentRef] = field(default_factory=list)
