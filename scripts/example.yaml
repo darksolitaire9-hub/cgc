@@ -1,0 +1,13 @@
+source:
+  value: "https://lichess.org/1ORTExZg" # any valid Lichess URL you like
+
+cards:
+  - id: "intro-1"
+    type: "text"
+    lines:
+      - "Welcome to this game."
+  - id: "opening-1"
+    type: "board"
+    ply: 4
+    lines:
+      - "White develops a knight."
