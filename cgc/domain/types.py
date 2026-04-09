@@ -53,3 +53,18 @@ class Story:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass
+class SceneAudioRef:
+    scene_id: str
+    index: int
+    clip_path: str | None
+    duration: float
+
+
+@dataclass
+class AudioManifest:
+    game_id: str
+    merged_audio_path: str | None
+    scenes: list[SceneAudioRef] = field(default_factory=list)
