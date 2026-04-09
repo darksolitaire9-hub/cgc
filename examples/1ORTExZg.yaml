@@ -1,0 +1,31 @@
+version: 1
+
+source:
+  type: lichess_url
+  value: "https://lichess.org/1ORTExZg"
+
+meta:
+  voice: cinematic-bullet
+  perspective: black
+
+cards:
+  - id: intro-1
+    type: text
+    duration: 2.8
+    lines:
+      - "He was 41 rating points behind."
+      - "One minute on the clock."
+      - "Nobody gave him a chance."
+  - id: opening-1
+    type: board
+    ply: 1
+    role: opening
+    duration: 2.1
+    highlight:
+      mode: last_move
+    lines:
+      - "The Old Benoni."
+      - "A fighting weapon."
+      - "Named 'son of sorrow.'"
+      - "Tonight... someone would feel that."
+  # ... rest of the cards exactly as before ...

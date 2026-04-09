@@ -52,6 +52,8 @@ class Story:
     scenes: list[Scene] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        # Recursively convert nested dataclasses into JSON‑ready types.
+        # This matches the target JSON layout when manifests are applied.
         return asdict(self)
 
 
