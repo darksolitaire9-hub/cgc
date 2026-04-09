@@ -5,7 +5,8 @@ from pathlib import Path
 from cgc.adapters.alignment import build_fake_alignment_manifest
 from cgc.adapters.fetcher import extract_game_id, fetch_game
 from cgc.adapters.subtitles import write_ass
-from cgc.adapters.tts import build_fake_audio_manifest
+from cgc.adapters.tts import build_audio_manifest, build_fake_audio_manifest
+from cgc.config import PipelineConfig
 from cgc.domain.alignment import apply_alignment_manifest
 from cgc.domain.audio import apply_audio_manifest
 from cgc.domain.story import (
@@ -23,6 +24,7 @@ from cgc.domain.timeline import (
 
 
 def build_story_from_script(script_path: str) -> None:
+    cfg = PipelineConfig()
     script = load_script(script_path)
     validate_script(script)
 
@@ -34,7 +36,10 @@ def build_story_from_script(script_path: str) -> None:
     enriched = enrich_cards_with_positions(game, script)
     story = build_story(enriched, game_id, meta)
 
-    audio_manifest = build_fake_audio_manifest(story, default_seconds=2.0)
+    # For now, use fake TTS manifest to avoid Kokoro/espeak issues on this machine.
+    # When phonemizer/espeak is configured, switch this to build_audio_manifest.
+    # audio_manifest = build_audio_manifest(story, cfg)
+    audio_manifest = build_fake_audio_manifest(story, cfg, default_seconds=2.0)
     story = apply_audio_manifest(story, audio_manifest)
     story = assign_scene_timing(story)
 
