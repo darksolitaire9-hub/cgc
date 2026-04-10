@@ -112,6 +112,16 @@ def run_pipeline(
 
     # 9) Render frames
     frames_dir = "output/frames"
+
+    # Compute ending_fen from the last board scene so outros can show final position.
+    last_board_scene = None
+    for s in story.scenes:
+        if s.type == "board":
+            last_board_scene = s
+    ending_fen: str | None = None
+    if last_board_scene is not None:
+        ending_fen = (last_board_scene.raw or {}).get("fen")
+
     for scene in story.scenes:
         render_scene_frame(
             scene,
@@ -119,6 +129,7 @@ def run_pipeline(
             frames_dir=frames_dir,
             total_duration=total,
             flip_board=flip_board,
+            ending_fen=ending_fen,
         )
 
     # 10) Assemble video

@@ -1,4 +1,3 @@
-# cgc/video/assemble.py
 from __future__ import annotations
 
 import platform
@@ -100,16 +99,29 @@ def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
         raise RuntimeError(f"ffmpeg audio mux failed:\n{result.stderr}")
 
 
-def _burn_subtitles(video_path: Path, ass_path: Path, out_path: Path) -> None:
+def _burn_subtitles(
+    video_path: Path,
+    ass_path: Path,
+    out_path: Path,
+    total_duration: float,
+) -> None:
     """
-    Hard-burn ASS subtitles via -vf ass=.
+    Hard-burn ASS subtitles via -vf ass=, then fade video to black at the end.
     Preferred over soft subs for vertical/social MP4 compatibility.
     _resolve_path handles Windows drive-letter escaping automatically.
     """
+    fade_duration = 0.5  # seconds, video-only fade
+    fade_start = max(0.0, total_duration - fade_duration)
+
+    vf_filter = (
+        f"ass={_resolve_path(ass_path)},"
+        f"fade=t=out:st={fade_start}:d={fade_duration}"
+    )
+
     cmd = [
         "ffmpeg", "-y",
         "-i", _resolve_path(video_path),
-        "-vf", f"ass={_resolve_path(ass_path)}",
+        "-vf", vf_filter,
         "-c:v", "libx264",
         "-crf", "18",
         "-preset", "fast",
@@ -140,7 +152,7 @@ def assemble_video(
     Steps (each is a discrete ffmpeg pass):
       1. Encode video-only MP4: each PNG held for its scene's audio duration.
       2. If audio_path given: mux audio (AAC 192k, trimmed to video length).
-      3. If ass_path given: burn ASS subtitles (hard-coded, social-compatible).
+      3. If ass_path given: burn ASS subtitles and fade video to black.
 
     Args:
         story:      Fully-timed Story (assign_scene_timing must have run).
@@ -190,11 +202,11 @@ def assemble_video(
     else:
         print("[assemble] step 2/3 — skipped (no audio_path)")
 
-    # --- Step 3: subtitle burn ---
+    # --- Step 3: subtitle burn + video fade ---
     if ass_path:
         final_path = out_root / f"{game_id}.mp4"
-        print(f"[assemble] step 3/3 — burning subtitles → {final_path}")
-        _burn_subtitles(current_path, Path(ass_path), final_path)
+        print(f"[assemble] step 3/3 — burning subtitles + fade → {final_path}")
+        _burn_subtitles(current_path, Path(ass_path), final_path, total_duration=total)
         current_path = final_path
     else:
         print("[assemble] step 3/3 — skipped (no ass_path)")

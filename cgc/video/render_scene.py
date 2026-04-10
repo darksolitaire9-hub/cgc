@@ -22,12 +22,14 @@ def render_scene_frame(
     *,
     total_duration: float | None = None,
     flip_board: bool = False,
+    ending_fen: str | None = None,
 ) -> str:
     """
     Render a single 1080×1920 portrait frame for a scene.
 
     - board scenes: render board from scene.raw["fen"] with last_move_uci.
     - text/intro scenes: render starting position, no highlight.
+    - outro-* text scenes: render final board position if ending_fen is provided.
     - Subtitle text is handled by ASS; we just provide a clean top/bottom layout.
     """
     out_dir = Path(frames_dir)
@@ -41,8 +43,14 @@ def render_scene_frame(
         fen = raw.get("fen")
         last_move_uci = raw.get("last_move_uci")
     else:
-        fen = _STARTING_FEN
+        # For non-board scenes:
+        # - default to starting FEN (intro, generic text)
+        # - but for outro-* scenes use the final board position if provided
         last_move_uci = None
+        if scene.id.startswith("outro-") and ending_fen:
+            fen = ending_fen
+        else:
+            fen = _STARTING_FEN
 
     if fen:
         board_path = render_board_image(
