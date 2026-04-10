@@ -74,7 +74,11 @@ def run_pipeline(
     story = assign_scene_timing(story)
     validate_scene_order(story)
     validate_scene_durations(story)
-    validate_word_windows(story)
+   
+    # Only enforce word-level window constraints when alignment is real.
+    if not use_fake_alignment:
+        validate_word_windows(story)
+   
     total = compute_total_duration(story)
 
     # 7) Subtitles (ASS)

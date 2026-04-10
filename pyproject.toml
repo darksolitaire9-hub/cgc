@@ -8,7 +8,8 @@ dependencies = [
   "pyyaml",
   "numpy",
   "soundfile",
-  "kokoro-onnx",
   "imageio[ffmpeg]",
   "cairosvg",
+  "kokoro>=0.9.2",
+  "misaki[en]",
 ]

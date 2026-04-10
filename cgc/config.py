@@ -12,10 +12,13 @@ class PipelineConfig:
     subtitles_root: Path = Path("output/subtitles")
 
     # TTS
-    tts_voice: str = "cinematic-bullet"
-    tts_sample_rate: int = 24000
+    tts_sample_rate: int = 24_000
     tts_clip_dir_name: str = "clips"
     tts_merged_dir_name: str = "merged"
+    kokoro_voice: str = "af_nicole"
+    kokoro_lang: str = "a"  
+    kokoro_speed: float = 1.0 
+    kokoro_model_dir: Path = Path("models/kokoro")
 
     # Alignment
     alignment_language: str = "en"

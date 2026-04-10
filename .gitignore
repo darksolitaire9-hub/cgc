@@ -42,3 +42,9 @@ output/
 .cache/
 models/
 fonts/pieces.png
+
+# caches and outputs
+.hf_cache/
+s20_narration/
+output/
+*.wav
