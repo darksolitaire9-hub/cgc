@@ -150,11 +150,7 @@ def build_alignment_manifest(
                     scene.id,
                 )
                 alignment_scenes.append(
-                    SceneAlignmentRef(
-                        scene_id=scene.id,
-                        index=scene_index,
-                        words=[],
-                    )
+                    SceneAlignmentRef(scene_id=scene.id, index=scene_index, words=[])
                 )
                 continue
 
@@ -165,11 +161,7 @@ def build_alignment_manifest(
                     scene.id,
                 )
                 alignment_scenes.append(
-                    SceneAlignmentRef(
-                        scene_id=scene.id,
-                        index=scene_index,
-                        words=[],
-                    )
+                    SceneAlignmentRef(scene_id=scene.id, index=scene_index, words=[])
                 )
                 continue
 
@@ -180,11 +172,7 @@ def build_alignment_manifest(
                     scene.id,
                 )
                 alignment_scenes.append(
-                    SceneAlignmentRef(
-                        scene_id=scene.id,
-                        index=scene_index,
-                        words=[],
-                    )
+                    SceneAlignmentRef(scene_id=scene.id, index=scene_index, words=[])
                 )
                 continue
 
@@ -197,12 +185,19 @@ def build_alignment_manifest(
                     start_offset=start_offset,
                 )
             except RuntimeError:
-                # Programming error (load not called); re-raise to fail loudly.
+                # Programming or configuration error: fail fast, do not recover.
+                log.exception(
+                    "Programming error while aligning scene id=%s; this is not recoverable.",
+                    scene.id,
+                )
                 raise
             except torch.cuda.OutOfMemoryError:
+                # GPU OOM: retry this scene on CPU, then continue.
                 log.exception(
-                    "CUDA OOM while aligning scene id=%s; falling back to CPU for this scene.",
+                    "CUDA OOM while aligning scene id=%s on device=%s; "
+                    "falling back to CPU for this scene.",
                     scene.id,
+                    backend.device,
                 )
                 cpu_backend = AlignmentBackend(
                     language=cfg.alignment_language,
@@ -216,9 +211,17 @@ def build_alignment_manifest(
                         text=spoken_text,
                         start_offset=start_offset,
                     )
+                except Exception:
+                    log.exception(
+                        "CPU alignment also failed for scene id=%s; "
+                        "continuing with empty alignment.",
+                        scene.id,
+                    )
+                    words = []
                 finally:
                     cpu_backend.unload()
             except Exception:
+                # Unexpected data/runtime error: log and continue with empty words.
                 log.exception(
                     "Failed to align scene id=%s; continuing with empty alignment.",
                     scene.id,
