@@ -16,6 +16,7 @@ from cgc.config import PipelineConfig
 from cgc.domain.alignment import apply_alignment_manifest
 from cgc.domain.audio import apply_audio_manifest
 from cgc.domain.story import (
+    META_KEY_HERO_COLOR,
     build_story,
     enrich_cards_with_positions,
     extract_meta,
@@ -58,6 +59,10 @@ def run_pipeline(
     meta = extract_meta(game, script)
     enriched = enrich_cards_with_positions(game, script)
     story = build_story(enriched, game_id, meta)
+
+    # Derive hero-based board orientation
+    hero_color = story.meta.get(META_KEY_HERO_COLOR, "white")
+    flip_board = hero_color == "black"
 
     # 4) Audio manifest
     if use_fake_tts:
@@ -111,12 +116,12 @@ def run_pipeline(
         render_scene_frame(
             scene,
             game_id=story.game_id,
-            frames_dir="output/frames",
+            frames_dir=frames_dir,
             total_duration=total,
+            flip_board=flip_board,
         )
 
     # 10) Assemble video
-    # audio_path is None until real TTS is wired (step C in roadmap)
     merged_audio_path = audio_manifest.merged_audio_path  # None when fake
     video_path = assemble_video(
         story,

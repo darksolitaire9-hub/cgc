@@ -7,7 +7,14 @@ import chess
 import chess.pgn
 import yaml
 
+from cgc.adapters.fetcher import resolve_hero_color
 from cgc.domain.types import Scene, Story, VisualInfo
+from cgc.settings.user import HERO_USERNAME
+
+META_KEY_VOICE = "voice"
+META_KEY_PERSPECTIVE = "perspective"
+META_KEY_HERO_USERNAME = "hero_username"
+META_KEY_HERO_COLOR = "hero_color"
 
 
 def load_script(script_path: str) -> dict:
@@ -39,16 +46,31 @@ def validate_script(script: dict) -> None:
 
 def extract_meta(game: chess.pgn.Game, script: dict) -> dict[str, Any]:
     headers = game.headers
-    hero = (script.get("source") or {}).get("hero")
+    hero_from_script = (script.get("source") or {}).get("hero")
+
+    white_name = headers.get("White", "?")
+    black_name = headers.get("Black", "?")
+    white_elo = headers.get("WhiteElo", "?")
+    black_elo = headers.get("BlackElo", "?")
+
+    hero_color = resolve_hero_color(
+        white_name=white_name,
+        black_name=black_name,
+        white_elo=white_elo,
+        black_elo=black_elo,
+        hero_username=HERO_USERNAME,
+    )
 
     return {
-        "white": headers.get("White", "?"),
-        "black": headers.get("Black", "?"),
-        "white_elo": headers.get("WhiteElo", "?"),
-        "black_elo": headers.get("BlackElo", "?"),
+        "white": white_name,
+        "black": black_name,
+        "white_elo": white_elo,
+        "black_elo": black_elo,
         "result": headers.get("Result", "?"),
         "opening": headers.get("Opening", ""),
-        "hero": hero,
+        "hero": hero_from_script,
+        META_KEY_HERO_USERNAME: HERO_USERNAME,
+        META_KEY_HERO_COLOR: hero_color,
     }
 
 

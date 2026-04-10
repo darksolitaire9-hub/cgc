@@ -6,7 +6,38 @@ from urllib.parse import urlparse
 import chess.pgn
 import requests
 
+from cgc.settings.user import HERO_USERNAME
+
 LICHESS_GAME_API = "https://lichess.org/game/export/{game_id}"
+
+
+def resolve_hero_color(
+    white_name: str,
+    black_name: str,
+    white_elo: str | None,
+    black_elo: str | None,
+    hero_username: str | None,
+) -> str:
+    # 1. Explicit hero from settings, if present in this game
+    if hero_username:
+        if hero_username == white_name:
+            return "white"
+        if hero_username == black_name:
+            return "black"
+
+    # 2. Fallback: lower-rated player (if ratings available)
+    try:
+        w = int(white_elo) if white_elo else None
+        b = int(black_elo) if black_elo else None
+    except ValueError:
+        w = b = None
+
+    if w is not None and b is not None:
+        return "white" if w < b else "black"
+
+    # 3. Default fallback
+    return "white"
+
 
 
 def extract_game_id(url: str) -> str:

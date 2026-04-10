@@ -13,11 +13,13 @@ def render_board_image(
     last_move_uci: Optional[str] = None,
     size: int = 720,
     out_path: str | None = None,
+    *,
+    flipped: bool = False,
 ) -> str:
     """
     Render a chess board image from FEN (and optional last move) to a PNG file.
 
-    - Uses python-chess' chess.svg.board() for board+pieces. [web:87][web:92]
+    - Uses python-chess' chess.svg.board() for board+pieces. [web:91]
     - Converts SVG to PNG via cairosvg.svg2png(). [web:99]
     """
     board = chess.Board(fen)
@@ -33,7 +35,8 @@ def render_board_image(
         board=board,
         lastmove=lastmove,
         size=size,
-    )  # returns SVG string [web:87][web:97]
+        flipped=flipped,  # perspective control [web:91]
+    )
 
     if out_path is None:
         out_path = "output/frames/board.png"

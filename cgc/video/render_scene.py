@@ -16,11 +16,12 @@ _STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
 def render_scene_frame(
-    scene,
+    scene: Scene,
     game_id: str,
     frames_dir: str,
     *,
     total_duration: float | None = None,
+    flip_board: bool = False,
 ) -> str:
     """
     Render a single 1080×1920 portrait frame for a scene.
@@ -50,6 +51,7 @@ def render_scene_frame(
             last_move_uci=last_move_uci,
             size=BOARD_SIZE,
             out_path=str(out_dir / f"{game_id}_{scene.index:02d}_{scene.id}_board.png"),
+            flipped=flip_board,
         )
         board_img = Image.open(board_path).convert("RGB")
         board_img = board_img.resize((BOARD_SIZE, BOARD_SIZE))
