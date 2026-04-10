@@ -17,6 +17,15 @@ def normalize_spoken_text(text: str) -> str:
     return text
 
 
+def _make_kokoro_pipeline(cfg: PipelineConfig) -> KPipeline:
+    print(
+        f"[tts] constructing Kokoro KPipeline: repo_id={cfg.kokoro_repo_id if hasattr(cfg, 'kokoro_repo_id') else 'hexgrad/Kokoro-82M'} lang={cfg.kokoro_lang!r}"
+    )
+    pipeline = KPipeline(lang_code=cfg.kokoro_lang, repo_id="hexgrad/Kokoro-82M")
+    print(f"[tts] KPipeline constructed: {pipeline!r}")
+    return pipeline
+
+
 def build_audio_manifest(story: Story, cfg: PipelineConfig) -> AudioManifest:
     """
     Real TTS using Kokoro KPipeline (af_nicole).
@@ -33,7 +42,7 @@ def build_audio_manifest(story: Story, cfg: PipelineConfig) -> AudioManifest:
     clips_dir.mkdir(parents=True, exist_ok=True)
     cfg.merged_audio_dir.mkdir(parents=True, exist_ok=True)
 
-    pipeline = KPipeline(lang_code=cfg.kokoro_lang, repo_id="hexgrad/Kokoro-82M")
+    pipeline = _make_kokoro_pipeline(cfg)
 
     scene_refs: list[SceneAudioRef] = []
 
