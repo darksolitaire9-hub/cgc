@@ -10,7 +10,7 @@ from cgc.video.render_board import render_board_image
 
 FRAME_WIDTH = 1080
 FRAME_HEIGHT = 1920
-BOARD_SIZE = 1080
+BOARD_SIZE = 1080  # keep board square at full width
 
 _STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -28,8 +28,7 @@ def render_scene_frame(
 
     - board scenes: render board from scene.raw["fen"] with last_move_uci.
     - text/intro scenes: render starting position, no highlight.
-    - NO text drawn — all narration carried by ASS subtitles.
-    - Progress bar drawn at bottom strip when total_duration is supplied.
+    - Subtitle text is handled by ASS; we just provide a clean top/bottom layout.
     """
     out_dir = Path(frames_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -54,10 +53,16 @@ def render_scene_frame(
             flipped=flip_board,
         )
         board_img = Image.open(board_path).convert("RGB")
-        board_img = board_img.resize((BOARD_SIZE, BOARD_SIZE))
-        frame.paste(board_img, (0, 0))
 
-    # --- progress bar (optional) — must be before save ---
+        # Ensure board fills width and is square
+        board_img = board_img.resize((FRAME_WIDTH, FRAME_WIDTH))
+
+        # Place board at the very top; subtitles occupy the lower area
+        board_x = 0
+        board_y = 0
+        frame.paste(board_img, (board_x, board_y))
+
+    # --- progress bar (optional) ---
     if total_duration is not None:
         draw_progress_bar(
             frame,

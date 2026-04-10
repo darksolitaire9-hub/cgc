@@ -23,7 +23,6 @@ from cgc.domain.story import (
     load_script,
     validate_script,
 )
-from cgc.domain.subtitles import build_subtitle_events
 from cgc.domain.timeline import (
     assign_scene_timing,
     compute_total_duration,
@@ -34,6 +33,7 @@ from cgc.domain.validation import (
     validate_scene_order,
     validate_word_windows,
 )
+from cgc.video.ass_karaoke import build_subtitle_events
 from cgc.video.assemble import assemble_video
 from cgc.video.render_scene import render_scene_frame
 
