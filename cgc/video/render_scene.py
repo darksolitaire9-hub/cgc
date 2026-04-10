@@ -5,7 +5,6 @@ from pathlib import Path
 from PIL import Image
 
 from cgc.domain.types import Scene
-from cgc.video.progress import draw_progress_bar
 from cgc.video.render_board import render_board_image
 
 FRAME_WIDTH = 1080
@@ -20,7 +19,6 @@ def render_scene_frame(
     game_id: str,
     frames_dir: str,
     *,
-    total_duration: float | None = None,
     flip_board: bool = False,
     ending_fen: str | None = None,
 ) -> str:
@@ -69,14 +67,6 @@ def render_scene_frame(
         board_x = 0
         board_y = 0
         frame.paste(board_img, (board_x, board_y))
-
-    # --- progress bar (optional) ---
-    if total_duration is not None:
-        draw_progress_bar(
-            frame,
-            current_time=scene.audio.start or 0.0,
-            total_duration=total_duration,
-        )
 
     out_path = out_dir / f"{game_id}_{scene.index:02d}_{scene.id}.png"
     frame.save(out_path, format="PNG")

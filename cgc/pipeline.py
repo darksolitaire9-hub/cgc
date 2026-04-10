@@ -127,7 +127,6 @@ def run_pipeline(
             scene,
             game_id=story.game_id,
             frames_dir=frames_dir,
-            total_duration=total,
             flip_board=flip_board,
             ending_fen=ending_fen,
         )

@@ -6,14 +6,16 @@ from pathlib import Path
 
 import imageio.v3 as iio
 import numpy as np
+from PIL import Image
 
 from cgc.domain.timeline import compute_total_duration
 from cgc.domain.types import Story
-
+from cgc.video.progress import draw_progress_bar
 
 # ---------------------------------------------------------------------------
 # Path utilities
 # ---------------------------------------------------------------------------
+
 
 def _resolve_path(p: str | Path) -> str:
     """
@@ -35,6 +37,7 @@ def _resolve_path(p: str | Path) -> str:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _scene_png_path(frames_dir: Path, game_id: str, scene) -> Path:
     """Reconstruct the exact path that render_scene_frame writes."""
     return frames_dir / f"{game_id}_{scene.index:02d}_{scene.id}.png"
@@ -49,8 +52,13 @@ def _encode_video_only(
     """
     Hold each scene's PNG for round(duration * fps) frames and write
     a silent libx264 MP4. Fails loudly on missing PNGs or bad timing.
+
+    The perimeter progress bar is drawn per final frame, using global time.
     """
     frame_list: list[np.ndarray] = []
+
+    total = compute_total_duration(story)
+    current_time = 0.0  # global time in seconds
 
     for scene in story.scenes:
         if scene.audio.start is None or scene.audio.end is None:
@@ -62,15 +70,29 @@ def _encode_video_only(
             raise ValueError(
                 f"Scene {scene.id!r} has non-positive duration: {duration:.3f}s"
             )
+
         png_path = _scene_png_path(frames_dir, story.game_id, scene)
         if not png_path.exists():
             raise FileNotFoundError(
                 f"Frame not found for scene {scene.id!r}: {png_path}\n"
                 "Run render_scene_frame for all scenes before assembling."
             )
-        frame = iio.imread(png_path)  # HWC uint8
+
+        base_frame = iio.imread(png_path)  # HWC uint8
         n_frames = max(1, round(duration * fps))
-        frame_list.extend([frame] * n_frames)
+
+        for i in range(n_frames):
+            t = current_time + i / fps  # global time for this frame
+
+            pil_frame = Image.fromarray(base_frame)
+            draw_progress_bar(
+                pil_frame,
+                current_time=t,
+                total_duration=total,
+            )
+            frame_list.append(np.array(pil_frame, dtype=np.uint8))
+
+        current_time += duration
 
     iio.imwrite(
         str(out_path),
@@ -85,12 +107,18 @@ def _encode_video_only(
 def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
     """Mux external WAV/AAC into the video, trimmed to video length."""
     cmd = [
-        "ffmpeg", "-y",
-        "-i", _resolve_path(video_path),
-        "-i", _resolve_path(audio_path),
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-b:a", "192k",
+        "ffmpeg",
+        "-y",
+        "-i",
+        _resolve_path(video_path),
+        "-i",
+        _resolve_path(audio_path),
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         "-shortest",
         _resolve_path(out_path),
     ]
@@ -114,18 +142,24 @@ def _burn_subtitles(
     fade_start = max(0.0, total_duration - fade_duration)
 
     vf_filter = (
-        f"ass={_resolve_path(ass_path)},"
-        f"fade=t=out:st={fade_start}:d={fade_duration}"
+        f"ass={_resolve_path(ass_path)},fade=t=out:st={fade_start}:d={fade_duration}"
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", _resolve_path(video_path),
-        "-vf", vf_filter,
-        "-c:v", "libx264",
-        "-crf", "18",
-        "-preset", "fast",
-        "-c:a", "copy",
+        "ffmpeg",
+        "-y",
+        "-i",
+        _resolve_path(video_path),
+        "-vf",
+        vf_filter,
+        "-c:v",
+        "libx264",
+        "-crf",
+        "18",
+        "-preset",
+        "fast",
+        "-c:a",
+        "copy",
         _resolve_path(out_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -136,6 +170,7 @@ def _burn_subtitles(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def assemble_video(
     story: Story,
@@ -150,7 +185,8 @@ def assemble_video(
     Assemble final MP4 from pre-rendered scene PNGs.
 
     Steps (each is a discrete ffmpeg pass):
-      1. Encode video-only MP4: each PNG held for its scene's audio duration.
+      1. Encode video-only MP4: each PNG held for its scene's audio duration,
+         with continuous perimeter progress bar.
       2. If audio_path given: mux audio (AAC 192k, trimmed to video length).
       3. If ass_path given: burn ASS subtitles and fade video to black.
 
@@ -164,11 +200,6 @@ def assemble_video(
 
     Returns:
         Absolute path to the final output MP4.
-
-    Raises:
-        FileNotFoundError: A scene PNG is missing.
-        ValueError:        A scene has missing or invalid timing.
-        RuntimeError:      An ffmpeg pass failed (stderr included).
     """
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)

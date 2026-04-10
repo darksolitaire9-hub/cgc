@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PIL import Image, ImageDraw
 
-_THICKNESS = 6  # px — border line width
+_THICKNESS = 14  # thicker bar for social video
 _BAR_COLOR = (0, 255, 255)  # cyan — matches ASS karaoke highlight
 _TRACK_COLOR = (30, 30, 30)  # near-black track (full perimeter, always drawn)
 
@@ -19,21 +19,9 @@ def draw_progress_bar(
     """
     Draw a perimeter progress tracer that travels clockwise around the frame.
 
-    Path: top-left → top-right → bottom-right → bottom-left → top-left
+    Path: top-left → top-right → bottom-right → bottom-left → top-left.
 
-    The full border is drawn as a dark track first, then the elapsed
-    portion is drawn over it in cyan, so the remaining path is always visible.
-
-    Args:
-        img:            PIL Image (1080×1920 or any size).
-        current_time:   Scene start time in seconds.
-        total_duration: Total story duration in seconds.
-        thickness:      Line width in pixels (default 6).
-        bar_color:      RGB for the elapsed portion.
-        track_color:    RGB for the unelapsed track.
-
-    Returns:
-        The same image with the tracer drawn in-place.
+    current_time is the global time in seconds since video start.
     """
     if total_duration <= 0:
         return img
@@ -42,21 +30,20 @@ def draw_progress_bar(
     draw = ImageDraw.Draw(img)
     t = thickness
 
-    # Clockwise segments: (start_point, end_point, segment_length)
     segments: list[tuple[tuple[float, float], tuple[float, float], float]] = [
-        ((0, 0), (w, 0), w),  # top:   left  → right
-        ((w, 0), (w, h), h),  # right: top   → bottom
+        ((0, 0), (w, 0), w),  # top:    left  → right
+        ((w, 0), (w, h), h),  # right:  top   → bottom
         ((w, h), (0, h), w),  # bottom: right → left
-        ((0, h), (0, 0), h),  # left:  bottom → top
+        ((0, h), (0, 0), h),  # left:   bottom → top
     ]
 
     perimeter = 2 * w + 2 * h
 
-    # --- draw full track first ---
+    # Draw full track
     for (x1, y1), (x2, y2), _ in segments:
         draw.line([(x1, y1), (x2, y2)], fill=track_color, width=t)
 
-    # --- draw elapsed portion ---
+    # Draw elapsed portion
     progress = min(max(current_time / total_duration, 0.0), 1.0)
     remaining = progress * perimeter
 
