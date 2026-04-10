@@ -4,8 +4,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from cgc.adapters.alignment import build_fake_alignment_manifest, build_alignment_manifest
-
+from cgc.adapters.alignment import (
+    build_alignment_manifest,
+    build_fake_alignment_manifest,
+)
 from cgc.adapters.fetcher import extract_game_id, fetch_game
 from cgc.adapters.storage import save_story
 from cgc.adapters.subtitles import write_ass
@@ -24,11 +26,13 @@ from cgc.domain.subtitles import build_subtitle_events
 from cgc.domain.timeline import (
     assign_scene_timing,
     compute_total_duration,
+)
+from cgc.domain.types import Story
+from cgc.domain.validation import (
     validate_scene_durations,
     validate_scene_order,
     validate_word_windows,
 )
-from cgc.domain.types import Story
 from cgc.video.assemble import assemble_video
 from cgc.video.render_scene import render_scene_frame
 
@@ -65,15 +69,15 @@ def run_pipeline(
 
     # 5) Alignment manifest (fake or real)
     if use_fake_alignment:
-            align_manifest = build_fake_alignment_manifest(story)
+        align_manifest = build_fake_alignment_manifest(story)
     else:
-            align_manifest = build_alignment_manifest(
-                story,
-                audio_manifest,
-                cfg,
-                requested_device=device,
-            )
-    
+        align_manifest = build_alignment_manifest(
+            story,
+            audio_manifest,
+            cfg,
+            requested_device=device,
+        )
+
     story = apply_alignment_manifest(story, align_manifest)
 
     # 6) Timeline: assign timing + validations + total duration
