@@ -8,7 +8,7 @@ from pathlib import Path
 class PipelineConfig:
     # Base directories
     output_root: Path = Path("output")
-    audio_root: Path = Path("s20_narration")  # clips + merged
+    audio_root: Path = Path("audio")  # clips + merged
     subtitles_root: Path = Path("output/subtitles")
 
     # TTS
@@ -16,12 +16,12 @@ class PipelineConfig:
     tts_clip_dir_name: str = "clips"
     tts_merged_dir_name: str = "merged"
     kokoro_voice: str = "af_nicole"
-    kokoro_lang: str = "a"  
-    kokoro_speed: float = 1.0 
-    kokoro_model_dir: Path = Path("models/kokoro")
+    kokoro_lang: str = "a"  # American English
+    kokoro_speed: float = 1.0  # normal speed
 
     # Alignment
     alignment_language: str = "en"
+    alignment_model_dir: Path = Path(".hf_cache") / "alignment_models"
 
     @property
     def clips_dir(self) -> Path:

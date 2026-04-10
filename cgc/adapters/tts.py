@@ -22,10 +22,10 @@ def build_audio_manifest(story: Story, cfg: PipelineConfig) -> AudioManifest:
     Real TTS using Kokoro KPipeline (af_nicole).
 
     Clips:
-      s20_narration/clips/{game_id}/{index}_{scene.id}.wav
+        audio/clips/{game_id}/{index}_{scene.id}.wav
 
     Merged:
-      s20_narration/merged/{game_id}.wav
+        audio/merged/{game_id}.wav
     """
 
     sample_rate = cfg.tts_sample_rate
