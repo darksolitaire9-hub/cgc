@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from cgc.adapters.alignment import build_fake_alignment_manifest
+from cgc.adapters.alignment import build_fake_alignment_manifest, build_alignment_manifest
+
 from cgc.adapters.fetcher import extract_game_id, fetch_game
 from cgc.adapters.storage import save_story
 from cgc.adapters.subtitles import write_ass
@@ -62,23 +63,28 @@ def run_pipeline(
 
     story = apply_audio_manifest(story, audio_manifest)
 
-    # 5) Alignment manifest
+    # 5) Alignment manifest (fake or real)
     if use_fake_alignment:
-        align_manifest = build_fake_alignment_manifest(story)
+            align_manifest = build_fake_alignment_manifest(story)
     else:
-        raise NotImplementedError("real alignment manifest not wired yet")
-
+            align_manifest = build_alignment_manifest(
+                story,
+                audio_manifest,
+                cfg,
+                requested_device=device,
+            )
+    
     story = apply_alignment_manifest(story, align_manifest)
 
     # 6) Timeline: assign timing + validations + total duration
     story = assign_scene_timing(story)
     validate_scene_order(story)
     validate_scene_durations(story)
-   
+
     # Only enforce word-level window constraints when alignment is real.
     if not use_fake_alignment:
         validate_word_windows(story)
-   
+
     total = compute_total_duration(story)
 
     # 7) Subtitles (ASS)
