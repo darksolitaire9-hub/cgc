@@ -12,4 +12,5 @@ dependencies = [
   "cairosvg",
   "kokoro>=0.9.2",
   "misaki[en]",
+  "whisperx==3.7.1",
 ]
