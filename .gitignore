@@ -48,3 +48,10 @@ fonts/pieces.png
 s20_narration/
 output/
 *.wav
+
+
+# Local debug helpers
+debug/
+
+# Local one-off scripts
+scripts/*.yaml
