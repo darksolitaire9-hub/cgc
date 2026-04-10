@@ -1,6 +1,7 @@
 # cgc/video/assemble.py
 from __future__ import annotations
 
+import platform
 import subprocess
 from pathlib import Path
 
@@ -10,6 +11,30 @@ import numpy as np
 from cgc.domain.timeline import compute_total_duration
 from cgc.domain.types import Story
 
+
+# ---------------------------------------------------------------------------
+# Path utilities
+# ---------------------------------------------------------------------------
+
+def _resolve_path(p: str | Path) -> str:
+    """
+    Return a path string safe for use anywhere in this module.
+
+    - On Windows: backslashes → forward slashes, drive colon escaped to \\:
+      (required by ffmpeg -vf ass= and -i on Windows)
+    - On POSIX: returns the POSIX string unchanged.
+
+    Accepts both str and Path objects.
+    """
+    posix = Path(p).as_posix()  # always forward slashes, works on all OS
+    if platform.system() == "Windows" and len(posix) > 1 and posix[1] == ":":
+        posix = posix[0] + "\\:" + posix[2:]
+    return posix
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
 def _scene_png_path(frames_dir: Path, game_id: str, scene) -> Path:
     """Reconstruct the exact path that render_scene_frame writes."""
@@ -54,26 +79,21 @@ def _encode_video_only(
         fps=fps,
         codec="libx264",
         pixelformat="yuv420p",
+        macro_block_size=2,  # keeps 1080×1920 exact — no silent resize
     )
 
 
 def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
     """Mux external WAV/AAC into the video, trimmed to video length."""
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(video_path),
-        "-i",
-        str(audio_path),
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
+        "ffmpeg", "-y",
+        "-i", _resolve_path(video_path),
+        "-i", _resolve_path(audio_path),
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-b:a", "192k",
         "-shortest",
-        str(out_path),
+        _resolve_path(out_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -84,30 +104,26 @@ def _burn_subtitles(video_path: Path, ass_path: Path, out_path: Path) -> None:
     """
     Hard-burn ASS subtitles via -vf ass=.
     Preferred over soft subs for vertical/social MP4 compatibility.
-    Uses forward slashes for the ass= filter path (required on Windows too).
+    _resolve_path handles Windows drive-letter escaping automatically.
     """
-    ass_str = ass_path.as_posix()
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(video_path),
-        "-vf",
-        f"ass={ass_str}",
-        "-c:v",
-        "libx264",
-        "-crf",
-        "18",
-        "-preset",
-        "fast",
-        "-c:a",
-        "copy",
-        str(out_path),
+        "ffmpeg", "-y",
+        "-i", _resolve_path(video_path),
+        "-vf", f"ass={_resolve_path(ass_path)}",
+        "-c:v", "libx264",
+        "-crf", "18",
+        "-preset", "fast",
+        "-c:a", "copy",
+        _resolve_path(out_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg subtitle burn failed:\n{result.stderr}")
 
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def assemble_video(
     story: Story,
@@ -153,7 +169,6 @@ def assemble_video(
         f"total={total:.2f}s fps={fps}"
     )
 
-    # Intermediate names avoid clobbering the final output on re-runs.
     needs_intermediate = bool(audio_path or ass_path)
     video_only_path = (
         out_root / f"{game_id}_video_only.mp4"
