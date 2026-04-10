@@ -94,10 +94,12 @@ def run_pipeline(
     # 9) Render frames
     frames_dir = "output/frames"
     for scene in story.scenes:
-        frame_path = render_scene_frame(
-            scene, game_id=story.game_id, frames_dir=frames_dir
+        render_scene_frame(
+            scene,
+            game_id=story.game_id,
+            frames_dir="output/frames",
+            total_duration=total,
         )
-        print(f"  frame → {frame_path}")
 
     # 10) Assemble video
     # audio_path is None until real TTS is wired (step C in roadmap)
