@@ -116,39 +116,6 @@ def _draw_player_bar(draw: ImageDraw.ImageDraw, meta: dict[str, Any]) -> None:
     )
 
 
-def _draw_eval_strip(draw: ImageDraw.ImageDraw, eval_score: float | None) -> None:
-    # Background track
-    top = ZONE_BOARD_Y
-    bottom = ZONE_BOARD_Y + ZONE_BOARD_SIZE
-    draw.rectangle(
-        [(0, top), (EVAL_STRIP_W, bottom)],
-        fill=COLOR_EVAL_BG,
-    )
-
-    if eval_score is None:
-        fill = COLOR_EVAL_NEUTRAL
-        ratio = 0.5
-    else:
-        # Map eval_score from [-1, 1] to [0, 1]
-        clipped = max(-1.0, min(1.0, float(eval_score)))
-        ratio = (clipped + 1.0) / 2.0
-        if clipped > 0.3:
-            fill = COLOR_EVAL_WINNING
-        elif clipped < -0.3:
-            fill = COLOR_EVAL_LOSING
-        else:
-            fill = COLOR_EVAL_NEUTRAL
-
-    # Fill from bottom (losing) to top (winning)
-    total_h = bottom - top
-    filled_h = int(total_h * ratio)
-    y_start = bottom - filled_h
-    draw.rectangle(
-        [(0, y_start), (EVAL_STRIP_W, bottom)],
-        fill=fill,
-    )
-
-
 def _draw_move_badge(draw: ImageDraw.ImageDraw, ply: int | None) -> None:
     if ply is None:
         return
@@ -246,8 +213,7 @@ def render_scene_frame(
     board_img = board_img.resize((ZONE_BOARD_SIZE, ZONE_BOARD_SIZE), Image.LANCZOS)
     frame.paste(board_img, (0, ZONE_BOARD_Y))
 
-    # Eval strip
-    _draw_eval_strip(draw, getattr(scene, "eval_score", None))
+
 
     # Move badge
     _draw_move_badge(draw, getattr(scene, "ply", None))
