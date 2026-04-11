@@ -29,11 +29,13 @@ def validate_scene_durations(story: Story) -> None:
     for scene in story.scenes:
         if scene.audio.start is None or scene.audio.end is None:
             continue
-        if scene.audio.end < scene.audio.start:
-            raise ValueError(
-                f"scene {scene.id!r} has negative duration "
-                f"{scene.audio.end} < {scene.audio.start}"
-            )
+    
+            
+        if scene.audio.end <= scene.audio.start:
+                raise ValueError(
+                    f"scene {scene.id!r} has zero or negative duration "
+                    f"{scene.audio.end} <= {scene.audio.start}"
+                )
 
 
 def validate_word_windows(story: Story) -> None:

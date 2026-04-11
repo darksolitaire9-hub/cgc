@@ -121,7 +121,7 @@ def run_pipeline(
     ending_fen: str | None = None
     if last_board_scene is not None:
         ending_fen = (last_board_scene.raw or {}).get("fen")
-
+       
     for scene in story.scenes:
         render_scene_frame(
             scene,
@@ -129,6 +129,8 @@ def run_pipeline(
             frames_dir=frames_dir,
             flip_board=flip_board,
             ending_fen=ending_fen,
+            meta=story.meta,
+            total_duration=total,
         )
 
     # 10) Assemble video

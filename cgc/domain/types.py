@@ -41,6 +41,7 @@ class Scene:
     audio: AudioInfo = field(default_factory=AudioInfo)
     alignment: AlignmentInfo = field(default_factory=AlignmentInfo)
     visual: VisualInfo = field(default_factory=VisualInfo)
+    eval_score: float | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 

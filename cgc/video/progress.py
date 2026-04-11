@@ -2,59 +2,34 @@ from __future__ import annotations
 
 from PIL import Image, ImageDraw
 
-_THICKNESS = 14  # thicker bar for social video
-_BAR_COLOR = (0, 255, 255)  # cyan — matches ASS karaoke highlight
-_TRACK_COLOR = (30, 30, 30)  # near-black track (full perimeter, always drawn)
+from cgc.config import (
+    COLOR_ACCENT_GOLD,
+    COLOR_EVAL_BG,
+    ZONE_PROGRESS_H,
+    ZONE_PROGRESS_Y,
+)
+
+FRAME_W = 1080
 
 
-def draw_progress_bar(
-    img: Image.Image,
-    *,
-    current_time: float,
-    total_duration: float,
-    thickness: int = _THICKNESS,
-    bar_color: tuple[int, int, int] = _BAR_COLOR,
-    track_color: tuple[int, int, int] = _TRACK_COLOR,
-) -> Image.Image:
+def draw_progress_bar(frame: Image.Image, progress: float) -> None:
     """
-    Draw a perimeter progress tracer that travels clockwise around the frame.
+    Draw a horizontal progress strip at ZONE_PROGRESS_Y.
 
-    Path: top-left → top-right → bottom-right → bottom-left → top-left.
-
-    current_time is the global time in seconds since video start.
+    progress: 0.0 – 1.0  (caller computes audio.start / total_duration)
     """
-    if total_duration <= 0:
-        return img
+    draw = ImageDraw.Draw(frame)
 
-    w, h = img.size
-    draw = ImageDraw.Draw(img)
-    t = thickness
+    # Track (full width, dim background)
+    draw.rectangle(
+        [(0, ZONE_PROGRESS_Y), (FRAME_W, ZONE_PROGRESS_Y + ZONE_PROGRESS_H)],
+        fill=COLOR_EVAL_BG,
+    )
 
-    segments: list[tuple[tuple[float, float], tuple[float, float], float]] = [
-        ((0, 0), (w, 0), w),  # top:    left  → right
-        ((w, 0), (w, h), h),  # right:  top   → bottom
-        ((w, h), (0, h), w),  # bottom: right → left
-        ((0, h), (0, 0), h),  # left:   bottom → top
-    ]
-
-    perimeter = 2 * w + 2 * h
-
-    # Draw full track
-    for (x1, y1), (x2, y2), _ in segments:
-        draw.line([(x1, y1), (x2, y2)], fill=track_color, width=t)
-
-    # Draw elapsed portion
-    progress = min(max(current_time / total_duration, 0.0), 1.0)
-    remaining = progress * perimeter
-
-    for (x1, y1), (x2, y2), length in segments:
-        if remaining <= 0:
-            break
-        fill_len = min(remaining, length)
-        frac = fill_len / length
-        ex = x1 + frac * (x2 - x1)
-        ey = y1 + frac * (y2 - y1)
-        draw.line([(x1, y1), (ex, ey)], fill=bar_color, width=t)
-        remaining -= fill_len
-
-    return img
+    # Fill (proportional to progress, gold)
+    filled_w = int(FRAME_W * max(0.0, min(1.0, progress)))
+    if filled_w > 0:
+        draw.rectangle(
+            [(0, ZONE_PROGRESS_Y), (filled_w, ZONE_PROGRESS_Y + ZONE_PROGRESS_H)],
+            fill=COLOR_ACCENT_GOLD,
+        )

@@ -139,6 +139,9 @@ def build_story(script: dict, game_id: str, meta: dict[str, Any]) -> Story:
             display_lines=list(card.get("lines", [])),
             spoken_text=_spoken_text_from_card(card),
             visual=VisualInfo(highlight_mode=(card.get("highlight") or {}).get("mode")),
+            eval_score=float(card["eval_score"])
+            if card.get("eval_score") is not None
+            else None,
             raw=card,
         )
         scenes.append(scene)
