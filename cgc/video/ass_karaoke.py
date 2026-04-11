@@ -52,14 +52,15 @@ def build_subtitle_events(story: Story) -> Iterable[SubtitleEvent]:
     r"""
     Build ASS-ready subtitle events.
 
-    - One event per spoken word window.
-    - Text contains the full sentence (all words of the scene).
-    - The active word (for this event's time window) is highlighted in gold.
-    - Position is fixed via \pos to the narration zone centre.
+    Design:
+    - Full sentence visible for the entire scene audio window (no blinking).
+    - Events are chained with no gaps; each event highlights the current word.
+    - Pre-word gap [scene_start → first word start]: first word pre-highlighted.
+    - Word gap [word_n.start → word_n+1.start]: word_n stays highlighted.
+    - Post-word tail [last_word.start → scene_end]: last word stays highlighted.
     """
     events: List[SubtitleEvent] = []
 
-    # Pre-group words by scene so we can build full sentences per scene.
     by_scene = _scene_word_timings(story)
 
     for scene in story.scenes:
@@ -67,14 +68,44 @@ def build_subtitle_events(story: Story) -> Iterable[SubtitleEvent]:
         if not words:
             continue
 
-        for idx, w in enumerate(words):
-            text = _format_sentence(words, active_index=idx)
+        # Determine scene window.
+        if scene.audio.start is not None and scene.audio.end is not None:
+            scene_start = float(scene.audio.start)
+            scene_end = float(scene.audio.end)
+        else:
+            scene_start = min(w.start for w in words)
+            scene_end = max(w.end for w in words)
+
+        if scene_end <= scene_start:
+            continue
+
+        n = len(words)
+
+        # Optional leading gap: scene_start → first word start.
+        if words[0].start > scene_start:
+            text = _format_sentence(words, active_index=0)
             events.append(
                 SubtitleEvent(
-                    start=w.start,
-                    end=w.end,
+                    start=scene_start,
+                    end=words[0].start,
                     text=text,
                 )
             )
 
+        # One event per word: word_n.start → word_n+1.start (or scene_end for last).
+        for idx, w in enumerate(words):
+            ev_start = w.start
+            ev_end = words[idx + 1].start if idx < n - 1 else scene_end
+
+            # Clamp to scene window.
+            ev_start = max(ev_start, scene_start)
+            ev_end = min(ev_end, scene_end)
+
+            if ev_end <= ev_start:
+                continue
+
+            text = _format_sentence(words, active_index=idx)
+            events.append(SubtitleEvent(start=ev_start, end=ev_end, text=text))
+
+    events.sort(key=lambda e: e.start)
     return events
