@@ -1,35 +1,31 @@
-from __future__ import annotations
+# cgc/video/progress.py
+from cgc.video.render_scene import FRAME_W
 
-from PIL import Image, ImageDraw
-
-from cgc.config import (
-    COLOR_ACCENT_GOLD,
-    COLOR_EVAL_BG,
-    ZONE_PROGRESS_H,
-    ZONE_PROGRESS_Y,
-)
-
-FRAME_W = 1080
+BAR_Y = 1880
+BAR_H = 24
+_BAR_TRACK = "#2A2A2A"
+_BAR_FILL = "#FFD700"
 
 
-def draw_progress_bar(frame: Image.Image, progress: float) -> None:
+def build_progress_filter_parts(total_duration: float) -> tuple[str, str, str]:
     """
-    Draw a horizontal progress strip at ZONE_PROGRESS_Y.
+    Returns (track_filter, fill_source, overlay_filter) for -filter_complex.
 
-    progress: 0.0 – 1.0  (caller computes audio.start / total_duration)
+    Wire them up as:
+        [in]{track_filter}[track];
+        {fill_source}[fill];
+        [track][fill]{overlay_filter}[out]
     """
-    draw = ImageDraw.Draw(frame)
+    dur = max(total_duration, 1e-4)
 
-    # Track (full width, dim background)
-    draw.rectangle(
-        [(0, ZONE_PROGRESS_Y), (FRAME_W, ZONE_PROGRESS_Y + ZONE_PROGRESS_H)],
-        fill=COLOR_EVAL_BG,
-    )
+    # Static grey track — drawbox is fine here; no per-frame t needed
+    track_filter = f"drawbox=y={BAR_Y}:h={BAR_H}:w=iw:color={_BAR_TRACK}@1.0:t=fill"
 
-    # Fill (proportional to progress, gold)
-    filled_w = int(FRAME_W * max(0.0, min(1.0, progress)))
-    if filled_w > 0:
-        draw.rectangle(
-            [(0, ZONE_PROGRESS_Y), (filled_w, ZONE_PROGRESS_Y + ZONE_PROGRESS_H)],
-            fill=COLOR_ACCENT_GOLD,
-        )
+    # Full-width gold bar as a virtual colour source
+    fill_source = f"color=c={_BAR_FILL}:s={FRAME_W}x{BAR_H}:d={dur:.4f}"
+
+    # overlay evaluates x PER FRAME — t is the real PTS here
+    # Slides a full-width bar from x=-W to x=0 over [0, dur]
+    overlay_filter = f"overlay=x='trunc(W*(t/{dur:.4f}))-W':y={BAR_Y}:shortest=1"
+
+    return track_filter, fill_source, overlay_filter

@@ -1,3 +1,4 @@
+# cgc/video/assemble.py
 from __future__ import annotations
 
 import platform
@@ -6,6 +7,7 @@ from pathlib import Path
 
 from cgc.domain.timeline import compute_total_duration
 from cgc.domain.types import Story
+from cgc.video.progress import build_progress_filter_parts
 
 # ---------------------------------------------------------------------------
 # Path utilities
@@ -13,13 +15,7 @@ from cgc.domain.types import Story
 
 
 def _resolve_path(p: str | Path) -> str:
-    """
-    Return a path string safe for ffmpeg command-line arguments.
-
-    - Windows: backslashes → forward slashes, drive colon escaped to \\:
-      (required by ffmpeg -vf ass= and -i on Windows)
-    - POSIX: returns the POSIX string unchanged.
-    """
+    """Return a path string safe for ffmpeg command-line arguments."""
     posix = Path(p).as_posix()
     if platform.system() == "Windows" and len(posix) > 1 and posix[1] == ":":
         posix = posix[0] + "\\:" + posix[2:]
@@ -32,83 +28,47 @@ def _resolve_path(p: str | Path) -> str:
 
 
 def _scene_png_path(frames_dir: Path, game_id: str, scene) -> Path:
-    """Reconstruct the exact path that render_scene_frame writes."""
     return frames_dir / f"{game_id}_{scene.index:02d}_{scene.id}.png"
 
 
-def _write_concat_file(
-    story: Story,
-    frames_dir: Path,
-    concat_path: Path,
-) -> None:
-    """
-    Write an ffmpeg concat demuxer input file.
-
-    Format per scene:
-        file '/abs/posix/path/to/frame.png'
-        duration 2.000000
-
-    The last file entry is written once more without a duration tag —
-    this prevents ffmpeg from silently dropping the final frame, which
-    is a known concat demuxer behaviour when the last entry has a duration.
-
-    Raises ValueError / FileNotFoundError loudly on bad timing or missing PNGs.
-    """
+def _write_concat_file(story: Story, frames_dir: Path, concat_path: Path) -> None:
+    """Write an ffmpeg concat demuxer input file."""
     lines: list[str] = []
     last_posix: str | None = None
 
     for scene in story.scenes:
         if scene.audio.start is None or scene.audio.end is None:
-            raise ValueError(
-                f"Scene {scene.id!r} has no timing — run assign_scene_timing first."
-            )
+            raise ValueError(f"Scene {scene.id!r} has no timing.")
+
         duration = scene.audio.end - scene.audio.start
-        if duration <= 0:
-            raise ValueError(
-                f"Scene {scene.id!r} has non-positive duration: {duration:.3f}s"
-            )
-
         png_path = _scene_png_path(frames_dir, story.game_id, scene)
-        if not png_path.exists():
-            raise FileNotFoundError(
-                f"Frame not found for scene {scene.id!r}: {png_path}\n"
-                "Run render_scene_frame for all scenes before assembling."
-            )
 
-        # Absolute POSIX path — safe inside concat file on all platforms.
-        # Note: no _resolve_path here; the \\: escaping is only for CLI args.
+        if not png_path.exists():
+            raise FileNotFoundError(f"Frame not found: {png_path}")
+
         posix = png_path.resolve().as_posix()
         lines.append(f"file '{posix}'")
         lines.append(f"duration {duration:.6f}")
         last_posix = posix
 
-    # Repeat last entry without duration to prevent final-frame drop.
     if last_posix is not None:
         lines.append(f"file '{last_posix}'")
 
     concat_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+# ---------------------------------------------------------------------------
+# Processing Passes
+# ---------------------------------------------------------------------------
+
+
 def _encode_video_only(
-    story: Story,
-    frames_dir: Path,
-    out_path: Path,
-    fps: int,
+    story: Story, frames_dir: Path, out_path: Path, fps: int
 ) -> None:
-    """
-    Encode a silent libx264 MP4 from scene PNGs via ffmpeg concat demuxer.
-
-    Memory: O(1) — ffmpeg reads PNGs from disk one at a time.
-    No frame list is held in Python RAM.
-
-    The progress bar is already baked into each PNG by render_scene_frame.
-    The concat file is written next to out_path and deleted on exit.
-    """
+    """Step 1: Raw assembly of frames."""
     concat_path = out_path.parent / f"{story.game_id}_concat.txt"
-
     try:
         _write_concat_file(story, frames_dir, concat_path)
-
         cmd = [
             "ffmpeg",
             "-y",
@@ -119,27 +79,22 @@ def _encode_video_only(
             "-i",
             _resolve_path(concat_path),
             "-vf",
-            f"fps={fps}",
+            f"fps={fps},format=yuv420p",
             "-c:v",
             "libx264",
             "-crf",
             "18",
             "-preset",
-            "fast",
-            "-pix_fmt",
-            "yuv420p",
+            "ultrafast",
             _resolve_path(out_path),
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"ffmpeg video encode failed:\n{result.stderr}")
-
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
     finally:
         concat_path.unlink(missing_ok=True)
 
 
 def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
-    """Mux external WAV/AAC into the video, trimmed to video length."""
+    """Step 2: Add audio stream."""
     cmd = [
         "ffmpeg",
         "-y",
@@ -156,36 +111,45 @@ def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
         "-shortest",
         _resolve_path(out_path),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg audio mux failed:\n{result.stderr}")
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
-def _burn_subtitles(
-    video_path: Path,
-    ass_path: Path,
-    out_path: Path,
-    total_duration: float,
+def _burn_final_overlays(
+    video_path: Path, ass_path: Path | None, out_path: Path, total_duration: float
 ) -> None:
-    """
-    Hard-burn ASS subtitles via -vf ass=, then fade video to black at the end.
-    Preferred over soft subs for vertical/social MP4 compatibility.
-    _resolve_path handles Windows drive-letter escaping automatically.
-    """
-    fade_duration = 0.5
-    fade_start = max(0.0, total_duration - fade_duration)
+    """Step 3: Progress bar + subtitles + fade via filter_complex."""
+    from cgc.video.progress import build_progress_filter_parts
 
-    vf_filter = (
-        f"ass={_resolve_path(ass_path)},fade=t=out:st={fade_start}:d={fade_duration}"
-    )
+    fade_dur = 0.5
+    fade_start = max(0.0, total_duration - fade_dur)
+
+    track_f, fill_src, overlay_f = build_progress_filter_parts(total_duration)
+
+    # Build the filter_complex chain with explicit stream labels
+    fc: list[str] = [
+        f"[0:v]{track_f}[track]",  # draw grey track onto main video
+        f"{fill_src}[fill]",  # virtual colour source — no input needed
+        f"[track][fill]{overlay_f}[bar]",  # animated gold fill
+    ]
+    current = "[bar]"
+
+    if ass_path and ass_path.exists():
+        fc.append(f"{current}ass='{_resolve_path(ass_path)}'[subs]")
+        current = "[subs]"
+
+    fc.append(f"{current}fade=t=out:st={fade_start:.3f}:d={fade_dur}[out]")
 
     cmd = [
         "ffmpeg",
         "-y",
         "-i",
         _resolve_path(video_path),
-        "-vf",
-        vf_filter,
+        "-filter_complex",
+        ";".join(fc),
+        "-map",
+        "[out]",
+        "-map",
+        "0:a?",  # carry audio through unchanged; ? = optional
         "-c:v",
         "libx264",
         "-crf",
@@ -196,9 +160,7 @@ def _burn_subtitles(
         "copy",
         _resolve_path(out_path),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg subtitle burn failed:\n{result.stderr}")
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
 # ---------------------------------------------------------------------------
@@ -215,65 +177,28 @@ def assemble_video(
     out_dir: str = "output/video",
     fps: int = 30,
 ) -> str:
-    """
-    Assemble final MP4 from pre-rendered scene PNGs.
-
-    Steps (each is a discrete ffmpeg pass):
-      1. Encode video-only MP4 via concat demuxer — O(1) memory.
-      2. If audio_path given: mux audio (AAC 192k, trimmed to video length).
-      3. If ass_path given: burn ASS subtitles and fade video to black.
-
-    Args:
-        story:      Fully-timed Story (assign_scene_timing must have run).
-        frames_dir: Directory containing PNGs from render_scene_frame.
-        audio_path: Path to merged WAV/AAC (None = video-only output).
-        ass_path:   Path to .ass subtitle file (None = no subtitles).
-        out_dir:    Output directory for all intermediate and final MP4s.
-        fps:        Frames per second (default 30).
-
-    Returns:
-        Absolute path to the final output MP4.
-    """
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
-    frames_path = Path(frames_dir)
-
-    game_id = story.game_id
     total = compute_total_duration(story)
-    print(
-        f"[assemble] game={game_id} scenes={len(story.scenes)} "
-        f"total={total:.2f}s fps={fps}"
-    )
 
-    needs_intermediate = bool(audio_path or ass_path)
-    video_only_path = (
-        out_root / f"{game_id}_video_only.mp4"
-        if needs_intermediate
-        else out_root / f"{game_id}.mp4"
-    )
+    # 1. Assembly
+    v_tmp = out_root / f"{story.game_id}_v.mp4"
+    _encode_video_only(story, Path(frames_dir), v_tmp, fps)
 
-    # Step 1: video-only via concat demuxer
-    print(f"[assemble] step 1/3 — encoding frames → {video_only_path}")
-    _encode_video_only(story, frames_path, video_only_path, fps)
-    current_path = video_only_path
-
-    # Step 2: audio mux
+    # 2. Audio
+    current = v_tmp
     if audio_path:
-        audio_muxed_path = out_root / f"{game_id}_with_audio.mp4"
-        print(f"[assemble] step 2/3 — muxing audio → {audio_muxed_path}")
-        _mux_audio(current_path, Path(audio_path), audio_muxed_path)
-        current_path = audio_muxed_path
-    else:
-        print("[assemble] step 2/3 — skipped (no audio_path)")
+        a_tmp = out_root / f"{story.game_id}_va.mp4"
+        _mux_audio(current, Path(audio_path), a_tmp)
+        current = a_tmp
 
-    # Step 3: subtitle burn + video fade
-    if ass_path:
-        final_path = out_root / f"{game_id}.mp4"
-        print(f"[assemble] step 3/3 — burning subtitles + fade → {final_path}")
-        _burn_subtitles(current_path, Path(ass_path), final_path, total_duration=total)
-        current_path = final_path
-    else:
-        print("[assemble] step 3/3 — skipped (no ass_path)")
+    # 3. Overlays (Progress Bar + Subs)
+    final = out_root / f"{story.game_id}.mp4"
+    _burn_final_overlays(current, Path(ass_path) if ass_path else None, final, total)
 
-    print(f"[assemble] done → {current_path}")
-    return str(current_path)
+    # Clean up intermediates
+    for tmp in [v_tmp, out_root / f"{story.game_id}_va.mp4"]:
+        if tmp.exists() and tmp != final:
+            tmp.unlink()
+
+    return str(final)
