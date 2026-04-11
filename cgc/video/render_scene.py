@@ -33,7 +33,6 @@ from cgc.config import (
     ZONE_PLAYER_BAR_H,
     ZONE_PLAYER_BAR_Y,
 )
-from cgc.video.progress import draw_progress_bar
 from cgc.video.render_board import render_board_image
 
 FRAME_W = 1080
@@ -213,17 +212,10 @@ def render_scene_frame(
     board_img = board_img.resize((ZONE_BOARD_SIZE, ZONE_BOARD_SIZE), Image.LANCZOS)
     frame.paste(board_img, (0, ZONE_BOARD_Y))
 
-
-
     # Move badge
     _draw_move_badge(draw, getattr(scene, "ply", None))
 
-    # Progress strip based on audio start time vs total duration
-    start_time = getattr(scene.audio, "start", None) or 0.0
-    progress = 0.0
-    if total_duration > 0:
-        progress = max(0.0, min(1.0, start_time / total_duration))
-    draw_progress_bar(frame, progress=progress)
+   
 
     # Save frame
     out_dir = Path(frames_dir)

@@ -115,15 +115,17 @@ def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
 
 
 def _burn_final_overlays(
-    video_path: Path, ass_path: Path | None, out_path: Path, total_duration: float
+    video_path: Path,
+    ass_path: Path | None,
+    out_path: Path,
+    total_duration: float,
+    fps: int,
 ) -> None:
-    """Step 3: Progress bar + subtitles + fade via filter_complex."""
-    from cgc.video.progress import build_progress_filter_parts
 
     fade_dur = 0.5
     fade_start = max(0.0, total_duration - fade_dur)
 
-    track_f, fill_src, overlay_f = build_progress_filter_parts(total_duration)
+    track_f, fill_src, overlay_f = build_progress_filter_parts(total_duration, fps)
 
     # Build the filter_complex chain with explicit stream labels
     fc: list[str] = [
@@ -194,7 +196,13 @@ def assemble_video(
 
     # 3. Overlays (Progress Bar + Subs)
     final = out_root / f"{story.game_id}.mp4"
-    _burn_final_overlays(current, Path(ass_path) if ass_path else None, final, total)
+    _burn_final_overlays(
+        current,
+        Path(ass_path) if ass_path else None,
+        final,
+        total,
+        fps,
+    )
 
     # Clean up intermediates
     for tmp in [v_tmp, out_root / f"{story.game_id}_va.mp4"]:

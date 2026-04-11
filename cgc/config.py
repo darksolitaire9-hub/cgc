@@ -65,6 +65,10 @@ COLOR_EVAL_LOSING = (255, 107, 53)
 COLOR_EVAL_BG = (42, 42, 42)
 
 
+# Progress bar colours (track + fill)
+COLOR_PROGRESS_TRACK = COLOR_EVAL_BG
+COLOR_PROGRESS_FILL = COLOR_ACCENT_GOLD
+
 # ── Layout v2 — font paths (project-local, portable) ─────────────────────
 _FONTS_DIR = Path(__file__).parent / "assets" / "fonts"
 FONT_MONTSERRAT_BLACK = _FONTS_DIR / "Montserrat-Black.ttf"  # weight 900
