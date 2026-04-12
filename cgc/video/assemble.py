@@ -1,4 +1,3 @@
-# cgc/video/assemble.py
 from __future__ import annotations
 
 import platform
@@ -18,8 +17,16 @@ def _resolve_path(p: str | Path) -> str:
     """Return a path string safe for ffmpeg command-line arguments."""
     posix = Path(p).as_posix()
     if platform.system() == "Windows" and len(posix) > 1 and posix[1] == ":":
-        posix = posix[0] + "\\:" + posix[2:]
+        posix = posix[0] + "\\\\:" + posix[2:]
     return posix
+
+
+def _run_ffmpeg(cmd: list[str]) -> None:
+    """Run an ffmpeg command, raising RuntimeError with stderr on failure."""
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"FFmpeg failed:\n{e.stderr}") from e
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +95,7 @@ def _encode_video_only(
             "ultrafast",
             _resolve_path(out_path),
         ]
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        _run_ffmpeg(cmd)  # ← was subprocess.run(...)
     finally:
         concat_path.unlink(missing_ok=True)
 
@@ -111,7 +118,7 @@ def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
         "-shortest",
         _resolve_path(out_path),
     ]
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    _run_ffmpeg(cmd)  # ← was subprocess.run(...)
 
 
 def _burn_final_overlays(
@@ -121,17 +128,15 @@ def _burn_final_overlays(
     total_duration: float,
     fps: int,
 ) -> None:
-
     fade_dur = 0.5
     fade_start = max(0.0, total_duration - fade_dur)
 
     track_f, fill_src, overlay_f = build_progress_filter_parts(total_duration, fps)
 
-    # Build the filter_complex chain with explicit stream labels
     fc: list[str] = [
-        f"[0:v]{track_f}[track]",  # draw grey track onto main video
-        f"{fill_src}[fill]",  # virtual colour source — no input needed
-        f"[track][fill]{overlay_f}[bar]",  # animated gold fill
+        f"[0:v]{track_f}[track]",
+        f"{fill_src}[fill]",
+        f"[track][fill]{overlay_f}[bar]",
     ]
     current = "[bar]"
 
@@ -151,7 +156,7 @@ def _burn_final_overlays(
         "-map",
         "[out]",
         "-map",
-        "0:a?",  # carry audio through unchanged; ? = optional
+        "0:a?",
         "-c:v",
         "libx264",
         "-crf",
@@ -162,7 +167,7 @@ def _burn_final_overlays(
         "copy",
         _resolve_path(out_path),
     ]
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    _run_ffmpeg(cmd)  # ← was subprocess.run(...)
 
 
 # ---------------------------------------------------------------------------
@@ -183,30 +188,27 @@ def assemble_video(
     out_root.mkdir(parents=True, exist_ok=True)
     total = compute_total_duration(story)
 
-    # 1. Assembly
     v_tmp = out_root / f"{story.game_id}_v.mp4"
     _encode_video_only(story, Path(frames_dir), v_tmp, fps)
 
-    # 2. Audio
     current = v_tmp
     if audio_path:
         a_tmp = out_root / f"{story.game_id}_va.mp4"
         _mux_audio(current, Path(audio_path), a_tmp)
         current = a_tmp
 
-    # 3. Overlays (Progress Bar + Subs)
     final = out_root / f"{story.game_id}.mp4"
-    _burn_final_overlays(
-        current,
-        Path(ass_path) if ass_path else None,
-        final,
-        total,
-        fps,
-    )
-
-    # Clean up intermediates
-    for tmp in [v_tmp, out_root / f"{story.game_id}_va.mp4"]:
-        if tmp.exists() and tmp != final:
-            tmp.unlink()
+    try:
+        _burn_final_overlays(
+            current,
+            Path(ass_path) if ass_path else None,
+            final,
+            total,
+            fps,
+        )
+    finally:
+        for tmp in [v_tmp, out_root / f"{story.game_id}_va.mp4"]:
+            if tmp.exists() and tmp != final:
+                tmp.unlink()
 
     return str(final)

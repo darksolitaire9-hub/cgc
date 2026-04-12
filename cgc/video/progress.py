@@ -1,11 +1,10 @@
 from cgc.config import (
     COLOR_PROGRESS_FILL,
     COLOR_PROGRESS_TRACK,
+    FRAME_W,  # moved from render_scene → config
     ZONE_PROGRESS_H,
     ZONE_PROGRESS_Y,
 )
-
-from cgc.video.render_scene import FRAME_W
 
 
 def build_progress_filter_parts(
@@ -27,7 +26,8 @@ def build_progress_filter_parts(
     )
 
     overlay_filter = (
-        f"overlay=x='trunc(W*(t/{dur:.4f}))-W':y={ZONE_PROGRESS_Y}:shortest=1"
+        f"overlay=x='trunc(W*(t/{dur:.4f}))-W':y={ZONE_PROGRESS_Y}"
+        f":eof_action=repeat" 
     )
 
     return track_filter, fill_source, overlay_filter

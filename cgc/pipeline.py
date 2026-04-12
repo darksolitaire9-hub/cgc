@@ -102,6 +102,7 @@ def run_pipeline(
 
     # 8) Save canonical story JSON
     out_dir = Path("output/story")
+    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{game_id}.json"
     story_json_path = save_story(story, str(out_path))
 
@@ -121,7 +122,7 @@ def run_pipeline(
     ending_fen: str | None = None
     if last_board_scene is not None:
         ending_fen = (last_board_scene.raw or {}).get("fen")
-       
+
     for scene in story.scenes:
         render_scene_frame(
             scene,
