@@ -110,51 +110,6 @@ def _encode_video_only(
         concat_path.unlink(missing_ok=True)
 
 
-def _burn_final_overlays(
-    video_path: Path,
-    ass_path: Path | None,
-    out_path: Path,
-    total_duration: float,
-    fps: int,
-    enc_args: list[str],
-) -> None:
-    fade_dur = 0.5
-    fade_start = max(0.0, total_duration - fade_dur)
-
-    track_f, fill_src, overlay_f = build_progress_filter_parts(total_duration, fps)
-
-    fc: list[str] = [
-        f"[0:v]{track_f}[track]",
-        f"{fill_src}[fill]",
-        f"[track][fill]{overlay_f}[bar]",
-    ]
-    current = "[bar]"
-
-    if ass_path and ass_path.exists():
-        fc.append(f"{current}ass='{_resolve_path(ass_path)}'[subs]")
-        current = "[subs]"
-
-    fc.append(f"{current}fade=t=out:st={fade_start:.3f}:d={fade_dur}[out]")
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        _resolve_path(video_path),
-        "-filter_complex",
-        ";".join(fc),
-        "-map",
-        "[out]",
-        "-map",
-        "0:a?",
-        *enc_args,  # ← video encoder args, clean position
-        "-c:a",
-        "copy",  # ← audio is always copy, never touched by enc_args
-        _resolve_path(out_path),
-    ]
-    _run_ffmpeg(cmd)
-
-
 def _mux_audio(video_path: Path, audio_path: Path, out_path: Path) -> None:
     """Step 2: Add audio stream."""
     cmd = [

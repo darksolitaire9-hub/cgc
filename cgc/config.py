@@ -81,12 +81,14 @@ FONT_MONTSERRAT_BOLD = _FONTS_DIR / "Montserrat-Bold.ttf"  # weight 700
 FONT_MONTSERRAT_MEDIUM = _FONTS_DIR / "Montserrat-Medium.ttf"  # weight 500
 
 # ── Layout v2 — font sizes (pixels) ───────────────────────────────────────
-FONT_SIZE_HOOK: int = 148
-FONT_SIZE_SUBTITLE: int = 68
-FONT_SIZE_PLAYER: int = 38
-FONT_SIZE_RATING: int = 28
-FONT_SIZE_BADGE: int = 30
-FONT_SIZE_CTA: int = 72
+FONT_SIZE_HOOK: int = 52  # narration zone (to be wired in)
+FONT_SIZE_SUBTITLE: int = 64  # ASS karaoke (to be wired in)
+FONT_SIZE_PLAYER: int = 42  # player name
+GAP = 10  # between player and rating
+FONT_SIZE_RATING: int = 26  # player rating
+FONT_SIZE_BADGE: int = 30  # move badge
+FONT_SIZE_CTA: int = 72  # outro / CTA
+
 
 # Subtitle ASS position (center X, Y in pixels on 1080x1920)
 ASS_SUBTITLE_X: int = 540

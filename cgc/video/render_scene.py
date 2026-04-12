@@ -25,6 +25,9 @@ from cgc.config import (
     FONT_SIZE_HOOK,
     FONT_SIZE_PLAYER,
     FONT_SIZE_RATING,
+    FRAME_H,
+    FRAME_W,
+    GAP,
     SIDE_MARGIN,
     ZONE_BOARD_SIZE,
     ZONE_BOARD_Y,
@@ -34,9 +37,6 @@ from cgc.config import (
     ZONE_PLAYER_BAR_Y,
 )
 from cgc.video.render_board import render_board_image
-
-FRAME_W = 1080
-FRAME_H = 1920
 
 
 def _load_font(path: Path, size: int) -> ImageFont.FreeTypeFont:
@@ -64,7 +64,7 @@ def _draw_player_bar(draw: ImageDraw.ImageDraw, meta: dict[str, Any]) -> None:
     black = meta.get("black", "?")
     white_elo = meta.get("white_elo", "?")
     black_elo = meta.get("black_elo", "?")
-    hero_color = meta.get("hero_color", meta.get("hero_color", "white"))
+    hero_color = meta.get("hero_color", "white")
 
     if hero_color == "black":
         hero_name, hero_elo = black, black_elo
@@ -73,43 +73,63 @@ def _draw_player_bar(draw: ImageDraw.ImageDraw, meta: dict[str, Any]) -> None:
         hero_name, hero_elo = white, white_elo
         opp_name, opp_elo = black, black_elo
 
-    # Hero on the left
-    y_center = ZONE_PLAYER_BAR_Y + ZONE_PLAYER_BAR_H // 2
-    hero_x = SIDE_MARGIN
-    opp_x = FRAME_W - SIDE_MARGIN
+    hero_name_str = str(hero_name)
+    hero_elo_str = str(hero_elo)
+    opp_name_str = str(opp_name)
+    opp_elo_str = str(opp_elo)
 
-    # Hero name (gold)
+    # ── Compute block heights from actual font metrics ──────────────────────
+    hero_name_bbox = FONT_PLAYER_NAME.getbbox(hero_name_str)
+    hero_name_h = hero_name_bbox[3] - hero_name_bbox[1]
+
+    hero_elo_bbox = FONT_RATING.getbbox(hero_elo_str)
+    hero_elo_h = hero_elo_bbox[3] - hero_elo_bbox[1]
+
+    opp_name_bbox = FONT_PLAYER_NAME.getbbox(opp_name_str)
+    opp_name_h = opp_name_bbox[3] - opp_name_bbox[1]
+    opp_name_w = opp_name_bbox[2] - opp_name_bbox[0]
+
+    opp_elo_bbox = FONT_RATING.getbbox(opp_elo_str)
+    opp_elo_h = opp_elo_bbox[3] - opp_elo_bbox[1]
+    opp_elo_w = opp_elo_bbox[2] - opp_elo_bbox[0]
+
+    # ── Vertically centre the two-line block inside the bar ─────────────────
+    bar_center = ZONE_PLAYER_BAR_Y + ZONE_PLAYER_BAR_H // 2
+
+    # Hero block
+    hero_block_h = hero_name_h + GAP + hero_elo_h
+    hero_name_y = bar_center - hero_block_h // 2 - 4    
+    hero_elo_y = hero_name_y + hero_name_h + GAP
+
+    # Opponent block
+    opp_block_h = opp_name_h + GAP + opp_elo_h
+    opp_name_y = bar_center - opp_block_h // 2
+    opp_elo_y = opp_name_y + opp_name_h + GAP
+
+    # ── Draw hero (left-aligned) ─────────────────────────────────────────────
     draw.text(
-        (hero_x, y_center - 24),
-        str(hero_name),
+        (SIDE_MARGIN, hero_name_y),
+        hero_name_str,
         font=FONT_PLAYER_NAME,
         fill=COLOR_ACCENT_GOLD,
     )
-    # Hero rating (dim)
     draw.text(
-        (hero_x, y_center + 12),
-        str(hero_elo),
+        (SIDE_MARGIN, hero_elo_y),
+        hero_elo_str,
         font=FONT_RATING,
         fill=COLOR_TEXT_DIM,
     )
 
-    # Opponent name (primary)
-    opp_name_text = str(opp_name)
-    name_bbox = FONT_PLAYER_NAME.getbbox(opp_name_text)
-    opp_name_w = name_bbox[2] - name_bbox[0]
+    # ── Draw opponent (right-aligned) ────────────────────────────────────────
     draw.text(
-        (opp_x - opp_name_w, y_center - 24),
-        opp_name_text,
+        (FRAME_W - SIDE_MARGIN - opp_name_w, opp_name_y),
+        opp_name_str,
         font=FONT_PLAYER_NAME,
         fill=COLOR_TEXT_PRIMARY,
     )
-    # Opponent rating (dim)
-    opp_elo_text = str(opp_elo)
-    elo_bbox = FONT_RATING.getbbox(opp_elo_text)
-    opp_elo_w = elo_bbox[2] - elo_bbox[0]
     draw.text(
-        (opp_x - opp_elo_w, y_center + 12),
-        opp_elo_text,
+        (FRAME_W - SIDE_MARGIN - opp_elo_w, opp_elo_y),
+        opp_elo_str,
         font=FONT_RATING,
         fill=COLOR_TEXT_DIM,
     )
@@ -130,6 +150,36 @@ def _draw_move_badge(draw: ImageDraw.ImageDraw, ply: int | None) -> None:
         font=FONT_BADGE,
         fill=COLOR_ACCENT_GOLD,
     )
+
+
+def _draw_narration(draw: ImageDraw.ImageDraw, lines: list[str]) -> None:
+    if not lines:
+        return
+
+    zone_top = ZONE_NARRATION_Y
+    zone_bottom = ZONE_NARRATION_Y + ZONE_NARRATION_H
+    y = zone_top + 20
+
+    for line in lines:
+        if not line:
+            continue
+
+        text = str(line)
+        bbox = FONT_HOOK.getbbox(text)  # uses FONT_SIZE_HOOK
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        x = (FRAME_W - text_w) // 2
+
+        draw.text(
+            (x, y),
+            text,
+            font=FONT_HOOK,
+            fill=COLOR_TEXT_PRIMARY,
+        )
+
+        y += text_h + 8
+        if y > zone_bottom:
+            break
 
 
 def _draw_outro_text(frame: Image.Image, lines: list[str]) -> None:
@@ -214,8 +264,7 @@ def render_scene_frame(
 
     # Move badge
     _draw_move_badge(draw, getattr(scene, "ply", None))
-
-   
+    _draw_narration(draw, getattr(scene, "lines", []))
 
     # Save frame
     out_dir = Path(frames_dir)
