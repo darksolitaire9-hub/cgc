@@ -11,6 +11,9 @@ class PipelineConfig:
     audio_root: Path = Path("audio")  # clips + merged
     subtitles_root: Path = Path("output/subtitles")
 
+    # device
+    device: str = "cpu"
+
     # TTS
     tts_sample_rate: int = 24_000
     tts_clip_dir_name: str = "clips"

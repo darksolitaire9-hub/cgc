@@ -18,10 +18,16 @@ def normalize_spoken_text(text: str) -> str:
 
 
 def _make_kokoro_pipeline(cfg: PipelineConfig) -> KPipeline:
+    device = getattr(cfg, "device", "cpu")
     print(
-        f"[tts] constructing Kokoro KPipeline: repo_id={cfg.kokoro_repo_id if hasattr(cfg, 'kokoro_repo_id') else 'hexgrad/Kokoro-82M'} lang={cfg.kokoro_lang!r}"
+        f"[tts] constructing Kokoro KPipeline: repo_id=hexgrad/Kokoro-82M "
+        f"lang={cfg.kokoro_lang!r} device={device!r}"
     )
-    pipeline = KPipeline(lang_code=cfg.kokoro_lang, repo_id="hexgrad/Kokoro-82M")
+    pipeline = KPipeline(
+        lang_code=cfg.kokoro_lang,
+        repo_id="hexgrad/Kokoro-82M",
+        device=device,  # ← was missing
+    )
     print(f"[tts] KPipeline constructed: {pipeline!r}")
     return pipeline
 

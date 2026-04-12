@@ -44,7 +44,7 @@ def run_pipeline(
     use_fake_tts: bool = True,
     use_fake_alignment: bool = True,
 ) -> Story:
-    cfg = PipelineConfig()
+    cfg = PipelineConfig(device = device)
 
     # 1) Load and validate storyboard
     script = load_script(script_path)
