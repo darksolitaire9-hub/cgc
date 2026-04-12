@@ -51,8 +51,8 @@ FRAME_W: int = 1080
 FRAME_H: int = 1920
 ZONE_NARRATION_Y: int = 1410
 ZONE_NARRATION_H: int = 250
-ZONE_PROGRESS_Y: int = 1660
 ZONE_PROGRESS_H: int = 10
+ZONE_PROGRESS_Y: int = FRAME_H - ZONE_PROGRESS_H  # 1920 - 10 = 1910
 SIDE_MARGIN: int = 60
 EVAL_STRIP_W: int = 10
 
@@ -82,8 +82,12 @@ FONT_MONTSERRAT_MEDIUM = _FONTS_DIR / "Montserrat-Medium.ttf"  # weight 500
 
 # ── Layout v2 — font sizes (pixels) ───────────────────────────────────────
 FONT_SIZE_HOOK: int = 148
-FONT_SIZE_SUBTITLE: int = 88
+FONT_SIZE_SUBTITLE: int = 68
 FONT_SIZE_PLAYER: int = 38
 FONT_SIZE_RATING: int = 28
 FONT_SIZE_BADGE: int = 30
 FONT_SIZE_CTA: int = 72
+
+# Subtitle ASS position (center X, Y in pixels on 1080x1920)
+ASS_SUBTITLE_X: int = 540
+ASS_SUBTITLE_Y: int = 1660

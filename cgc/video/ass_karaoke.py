@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, List
 
-from cgc.domain.subtitles import build_subtitle_words, scene_words
+from cgc.config import ASS_SUBTITLE_X, ASS_SUBTITLE_Y
+from cgc.domain.subtitles import scene_words
 from cgc.domain.types import Story, WordTiming
 
 
@@ -31,8 +32,8 @@ def _format_sentence(words: List[WordTiming], active_index: int) -> str:
         else:
             parts.append(token)
     sentence = " ".join(parts)
-    # Fixed position: centre of narration zone (x=540, y=1535)
-    return r"{\pos(540,1535)}" + sentence
+
+    return rf"{{\pos({ASS_SUBTITLE_X},{ASS_SUBTITLE_Y})}}" + sentence
 
 
 def _scene_word_timings(story: Story) -> dict[int, List[WordTiming]]:
