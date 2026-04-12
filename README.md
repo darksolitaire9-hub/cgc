@@ -278,3 +278,22 @@ On an RTX-class GPU we observed approximately:
 
 - CPU: **83.8s**
 - CUDA: **38.8s**
+
+### 6.3 Choosing CPU vs GPU
+
+The pipeline has a `--device` flag that controls where Kokoro TTS and WhisperX run:
+
+- `cpu`  → run all models on the CPU  
+- `cuda` → run all models on the GPU (requires a CUDA-enabled PyTorch build)
+
+Examples:
+
+```bash
+# Force CPU (safe on any machine)
+uv run python -m cgc.pipeline scripts/game.yaml --device cpu --no-fake-tts --no-fake-alignment
+
+# Force GPU (fastest if torch.cuda.is_available() is True)
+uv run python -m cgc.pipeline scripts/game.yaml --device cuda --no-fake-tts --no-fake-alignment
+```
+
+If you only care about real audio and are OK with fake alignment, just omit `--no-fake-alignment` in either command.
