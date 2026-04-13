@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from cgc.adapters.alignment import (
@@ -44,7 +45,7 @@ def run_pipeline(
     use_fake_tts: bool = True,
     use_fake_alignment: bool = True,
 ) -> Story:
-    cfg = PipelineConfig(device = device)
+    cfg = PipelineConfig(device=device)
 
     # 1) Load and validate storyboard
     script = load_script(script_path)
@@ -171,8 +172,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if not Path(args.script).exists():
-        print("script not found:", args.script)
-        return
+        print("script not found:", args.script, file=sys.stderr)
+        sys.exit(1)
 
     run_pipeline(
         script_path=args.script,

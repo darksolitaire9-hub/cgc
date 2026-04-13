@@ -302,7 +302,7 @@ def build_alignment_manifest(
                 )
                 continue
 
-            spoken_text = " ".join(scene.display_lines).strip()
+            spoken_text = scene.spoken_text
             if not spoken_text:
                 log.warning(
                     "Empty spoken text for scene id=%s; skipping alignment for this scene.",

@@ -98,7 +98,7 @@ def _draw_player_bar(draw: ImageDraw.ImageDraw, meta: dict[str, Any]) -> None:
 
     # Hero block
     hero_block_h = hero_name_h + GAP + hero_elo_h
-    hero_name_y = bar_center - hero_block_h // 2 - 4    
+    hero_name_y = bar_center - hero_block_h // 2 - 4
     hero_elo_y = hero_name_y + hero_name_h + GAP
 
     # Opponent block
@@ -257,6 +257,9 @@ def render_scene_frame(
         last_move_uci=(scene.raw or {}).get("last_move_uci"),
         size=ZONE_BOARD_SIZE,
         flipped=flip_board,
+        out_path=str(
+            Path(frames_dir) / f"{game_id}_{scene.index:02d}_{scene.id}_board.png"
+        ),
     )
     board_img = Image.open(board_path).convert("RGB")
     board_img = board_img.resize((ZONE_BOARD_SIZE, ZONE_BOARD_SIZE), Image.LANCZOS)
