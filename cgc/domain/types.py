@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Optional
+from typing import Any, List, Optional
+
+
+@dataclass
+class SubtitleEvent:
+    start: float
+    end: float
+    text: str
 
 
 @dataclass
@@ -84,3 +91,18 @@ class SceneAlignmentRef:
 class AlignmentManifest:
     game_id: str
     scenes: list[SceneAlignmentRef] = field(default_factory=list)
+
+
+@dataclass
+class SubtitleChunk:
+    start_word_index: int
+    end_word_index: int
+    words: list[WordTiming] = field(default_factory=list)
+
+    @property
+    def start(self) -> float:
+        return self.words[0].start if self.words else 0.0
+
+    @property
+    def end(self) -> float:
+        return self.words[-1].end if self.words else 0.0

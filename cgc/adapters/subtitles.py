@@ -3,7 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from cgc.config import FONT_SIZE_SUBTITLE
+from cgc.config import (
+    FONT_SIZE_SUBTITLE,
+    SUBTITLE_FONT_NAME,
+    SUBTITLE_OUTLINE_COLOR,
+    SUBTITLE_PRIMARY_COLOR,
+    SUBTITLE_SECONDARY_COLOR,
+    SUBTITLE_SHADOW_COLOR,
+    SUBTITLE_STYLE_NAME,
+)
 from cgc.video.ass_karaoke import SubtitleEvent
 
 
@@ -17,8 +25,7 @@ PlayResY: 1920
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 
-Style: Default,Montserrat-Bold,{FONT_SIZE_SUBTITLE},&H00FFFFFF,&H000000FF,&H00000000,&H96000000,-1,0,0,0,100,100,0,0,1,4,2,2,40,40,320,1
-
+Style: {SUBTITLE_STYLE_NAME},{SUBTITLE_FONT_NAME},{FONT_SIZE_SUBTITLE},{SUBTITLE_PRIMARY_COLOR},{SUBTITLE_SECONDARY_COLOR},{SUBTITLE_OUTLINE_COLOR},{SUBTITLE_SHADOW_COLOR},-1,0,0,0,100,100,0,0,1,4,2,2,40,40,320,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
