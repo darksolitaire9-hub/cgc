@@ -1,5 +1,11 @@
 # CGC – Chess Game Content
 
+[![Watch the CGC demo video on YouTube](https://img.youtube.com/vi/uvE1BRr3KZw/maxresdefault.jpg)](https://youtu.be/uvE1BRr3KZw)
+
+
+
+# CGC – Chess Game Content
+
 CGC turns a Lichess game + a YAML “story script” into a vertical chess short
 (TikTok / Reels / Shorts) with:
 
