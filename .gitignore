@@ -55,3 +55,6 @@ debug/
 
 # Local one-off scripts
 scripts/*.yaml
+
+# voice samples
+voice_samples/

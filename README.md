@@ -78,7 +78,7 @@ uv run python -m cgc.pipeline scripts/game.yaml --device cpu --no-fake-tts
 
 - TTS: Kokoro KPipeline  
   - Repo: `hexgrad/Kokoro-82M`  
-  - Voice: `af_nicole`  
+  - Voice: `af_nicole` — see [available voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) 
   - Lang: `"a"` (American English)  
   - Speed: `1.0`
 - Alignment: fake (no WhisperX).
