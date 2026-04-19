@@ -6,26 +6,15 @@ from pathlib import Path
 os.environ["HF_HOME"] = str(Path(__file__).resolve().parent.parent / ".hf_cache")
 os.environ["HF_HUB_DISABLE_SYMLINKS"] = "1"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-os.environ.pop("HF_HUB_OFFLINE", None)  # must be online for first pull
+os.environ.pop("HF_HUB_OFFLINE", None)
 
 import soundfile as sf
 from kokoro import KPipeline
 
 from cgc.config import PipelineConfig
+from cgc.voices import voice_label, voices_for_lang
 
 cfg = PipelineConfig()
-
-VOICES = [
-    ("af_heart", "A  - top tier"),
-    ("af_bella", "A- - expressive storyteller"),
-    ("af_nicole", "B- - ASMR whisper"),
-    ("af_kore", "C+"),
-    ("af_aoede", "C+"),
-    ("af_sarah", "C+"),
-    ("am_fenrir", "C+ - best male"),
-    ("am_michael", "C+"),
-    ("am_puck", "C+"),
-]
 
 SAMPLE = (
     "Both knights crash forward with a check. "
@@ -39,16 +28,19 @@ OUT_DIR.mkdir(exist_ok=True)
 print(f"Current config voice: {cfg.kokoro_voice}\n")
 pipeline = KPipeline(lang_code=cfg.kokoro_lang)
 
-for voice, grade in VOICES:
+voices = voices_for_lang(cfg.kokoro_lang)
+
+for voice in voices:
+    grade = voice_label(voice)
     marker = "  <-- CURRENT" if voice == cfg.kokoro_voice else ""
     print(f"  {voice:<14} {grade}{marker}")
     for _, _, audio in pipeline(SAMPLE, voice=voice, speed=cfg.kokoro_speed):
         sf.write(OUT_DIR / f"{voice}.wav", audio, cfg.tts_sample_rate)
         break
 
-# browser player
 items = []
-for voice, grade in VOICES:
+for voice in voices:
+    grade = voice_label(voice)
     active = (
         ' style="background:#fffbe6;border-left:3px solid #e6a817;padding-left:8px"'
         if voice == cfg.kokoro_voice

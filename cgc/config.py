@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from cgc.voices import KokoroVoice
+
 
 @dataclass
 class PipelineConfig:
@@ -19,7 +21,7 @@ class PipelineConfig:
     tts_clip_dir_name: str = "clips"
     tts_merged_dir_name: str = "merged"
     kokoro_repo_id: str = "hexgrad/Kokoro-82M"
-    kokoro_voice: str = "af_nicole"
+    kokoro_voice: KokoroVoice = KokoroVoice.AF_BELLA
     kokoro_lang: str = "a"  # American English
     kokoro_speed: float = 1.0  # normal speed
 
