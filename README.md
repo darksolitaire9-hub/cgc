@@ -3,9 +3,12 @@
 [![Watch the CGC demo video on YouTube](https://img.youtube.com/vi/uvE1BRr3KZw/maxresdefault.jpg)](https://youtu.be/uvE1BRr3KZw)
 
 
+<<<<<<< HEAD
 
 # CGC – Chess Game Content
 
+=======
+>>>>>>> 7c59aa5 (feat: add multi-voice config and explicit HF offline flag)
 CGC turns a Lichess game + a YAML “story script” into a vertical chess short
 (TikTok / Reels / Shorts) with:
 
@@ -303,3 +306,20 @@ uv run python -m cgc.pipeline scripts/game.yaml --device cuda --no-fake-tts --no
 ```
 
 If you only care about real audio and are OK with fake alignment, just omit `--no-fake-alignment` in either command.
+
+
+## TTS
+
+CGC uses the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) text-to-speech model
+by hexgrad (Apache-2.0). See `THIRD_PARTY_NOTICES.md` for details.
+
+## Offline mode
+
+Once models and voices are cached, you can force a fully offline run with:
+
+```bash
+uv run python -m cgc.pipeline scripts/game.yaml --device cpu --no-fake-tts --no-fake-alignment --offline
+
+```
+
+Thank you for reading :) 

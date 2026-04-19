@@ -34,9 +34,12 @@ from cgc.domain.validation import (
     validate_scene_order,
     validate_word_windows,
 )
+from cgc.env import enable_hf_offline, setup_hf_cache
 from cgc.video.ass_karaoke import build_subtitle_events
 from cgc.video.assemble import assemble_video
 from cgc.video.render_scene import render_scene_frame
+
+setup_hf_cache()
 
 
 def run_pipeline(
@@ -168,12 +171,24 @@ def main() -> None:
         action="store_true",
         help="Use real alignment (not yet implemented)",
     )
+    parser.add_argument(
+        "--offline",  # NEW
+        action="store_true",
+        help=(
+            "Run with Hugging Face Hub in offline mode "
+            "(requires all models/voices to be pre-cached)."
+        ),
+    )
 
     args = parser.parse_args()
 
     if not Path(args.script).exists():
         print("script not found:", args.script, file=sys.stderr)
         sys.exit(1)
+
+    # Enable offline mode if requested (must happen before any HF calls).
+    if args.offline:
+        enable_hf_offline()
 
     run_pipeline(
         script_path=args.script,
