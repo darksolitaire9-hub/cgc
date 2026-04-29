@@ -3,14 +3,9 @@
 [![Watch the CGC demo video on YouTube](https://img.youtube.com/vi/uvE1BRr3KZw/maxresdefault.jpg)](https://youtu.be/uvE1BRr3KZw)
 
 
-<<<<<<< HEAD
 
 # CGC – Chess Game Content
 
-=======
->>>>>>> 7c59aa5 (feat: add multi-voice config and explicit HF offline flag)
-CGC turns a Lichess game + a YAML “story script” into a vertical chess short
-(TikTok / Reels / Shorts) with:
 
 - Hero-perspective board
 - Kokoro TTS narration (`hexgrad/Kokoro-82M`, voice `af_nicole`, American English)
